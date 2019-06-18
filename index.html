@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<head>
+<script src="https://gojs.net/latest/release/go-debug.js"></script>
+
+
+  <!-- Register service worker if supported. -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js');
+    }
+  </script>
+
+  <!-- Load polyfills -->
+  <script
+    src="./node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"
+    defer>
+  </script>
+
+  <!-- Load components via WebComponents.waitFor -->
+  <script type="module">
+    window.WebComponents = window.WebComponents || {
+      waitFor(cb){ addEventListener('WebComponentsReady', cb) }
+    }
+    WebComponents.waitFor(async () => {
+      import('./src/layout-borme-app.js');
+    });
+   
+  </script>
+
+  
+</head>
+
+<body>
+ 
+    <app-borme-layout title="LibreBorme.me">
+        <div id="myDiagramDiv" style="margin-top:64px;border:0px solid red;border-radius:3px;
+    position: relative; overflow: auto; width: 100%; height: 88vh; z-index: 1;
+    -webkit-box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.75);
+    -moz-box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.75);
+    box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.75);
+    " slot="graphContainer">&nbsp</div>
+    </app-borme-layout>
+  
+  
+   
+</body>
