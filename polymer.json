@@ -1,7 +1,7 @@
 {
     "root":"./",
     "entrypoint": "index.html",
-    "fragments": ["src/lazy-element.js"],
+    "fragments": ["src/node-adapter.js"],
     "npm":true,
     "moduleResolution": "node",
     "sources": ["./src/*.js", "manifest/**", "manifest.json", "package.json"],

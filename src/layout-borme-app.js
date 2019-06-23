@@ -3,6 +3,11 @@ import {Layouts,Positioning,Alignment} from 'lit-flexbox-literals';         /// 
 import {TopAppBar} from "@authentic/mwc-top-app-bar";
 import {IconButton} from "@authentic/mwc-icon-button";
 import {TextField} from "@authentic/mwc-textfield";
+import {Card} from "@authentic/mwc-card";
+import {GoJsNodeAdapter} from './node-adapter';
+import {CypherProcessor} from './cypher-processor';
+
+
 
 import {go} from "gojs/release/go-module";
 
@@ -16,13 +21,15 @@ class MainLayout extends LitElement{
     this.searchTypeActive=null;
     this.goGraph=go.GraphObject.make;
     this.myDiagram=null;
+    this.nodeAdapter=new GoJsNodeAdapter();
+    this.selectedNode=null;
 
     this.updateComplete.then(() => { this._renderDiagramContainer()});
 
   }
 
   firstUpdated(changedProperties) {
-    this.addEventListener('expand-person', (ev)=>{
+    this.addEventListener('expand-person', (ev)=>{/*
       fetch('http://localhost'+ev.detail.node.data.resource_uri,
       {
         method:'GET',
@@ -43,11 +50,14 @@ class MainLayout extends LitElement{
 
 
       // in the model data, each node is represented by a JavaScript object:
-         myModel.addNodeDataCollection(this._transformCompaniesToNode(myJson.in_companies,ev.detail.node.data.key));
+        // myModel.addNodeDataCollection(this._transformCompaniesToNode(myJson.in_companies,ev.detail.node.data.key));
+        myModel.addNodeDataCollection(this.nodeAdapter.transformPersonTo(myJson,ev.detail.node.data.key));
         this.myDiagram.commitTransaction("CollapseExpandTree");
           });/*.catch(function(error) {
             console.log('Hubo un problema con la petición Fetch:' + error.message);
           });;*/
+        
+          this._handlePersonDetails(ev.detail.node);
     }
     );
 
@@ -70,16 +80,37 @@ class MainLayout extends LitElement{
      */
     this.addEventListener('expand-empresa-confirmada', (ev)=>{
       console.log({empresa_confirmada:ev.detail});
+     
       this._handleCompanyDetails(ev.detail.node);
     });
+
+     /**
+     * Búsqueda de empresas por expansion de hallazgo asociado a persona
+     */
+    this.addEventListener('expand-empresa-search', (ev)=>{
+      console.log({empresa_confirmada:ev.detail});
+      this._handleCompanyDetails(ev.detail.node);
+    });
+
+
+
+
+    this.addEventListener('expand-person-search', (ev)=>{
+      console.log({empresa_confirmada:ev.detail});
+      console.log({expand_person:CypherProcessor.cypherNode("v","Person",ev.detail.node.data)});
+      this._handlePersonDetails(ev.detail.node);
+      
+    });
+
 
 
     /**
      * Búsqueda de empresas identificadas como relativas a otra empresa
      */
     this.addEventListener('expand-empresa-title', (ev)=>{
-      console.log({empresa_confirmada_title:ev.detail});
-      this._handleSearch(ev.detail.node.data.key.split("\n").join(" "),"empresa",ev.detail.node.data);
+      console.log({expand_empresa_title:ev.detail});
+      
+      this._handleSearch(ev.detail.node.data.searchTerm,"empresa",ev.detail.node.data);
     });
 
         /**
@@ -87,7 +118,7 @@ class MainLayout extends LitElement{
      */
     this.addEventListener('expand-person-title', (ev)=>{
       console.log({empresa_confirmada_title:ev.detail});
-      this._handleSearch(ev.detail.node.data.key.split("\n").join(" "),"persona",ev.detail.node.data);
+      this._handleSearch(ev.detail.node.data.searchTerm,"persona",ev.detail.node.data);
     });
   }
 
@@ -111,7 +142,8 @@ class MainLayout extends LitElement{
   static get properties(){
     return {
       title:{type:String},
-      searchTypeActive:{type:String}
+      searchTypeActive:{type:String},
+      selectedNode:{type:Object}
     };
   }
 
@@ -122,7 +154,7 @@ class MainLayout extends LitElement{
     {
       initialContentAlignment: go.Spot.Center,
       layout: this.goGraph(go.ForceDirectedLayout,{ arrangesToOrigin:false
-        ,maxIterations: 200, defaultSpringLength: 1000, defaultElectricalCharge: 1000 }),
+        ,maxIterations: 200, defaultSpringLength: 2500, defaultElectricalCharge:2500,epsilonDistance:10 }),
       // moving and copying nodes also moves and copies their subtrees
       "commandHandler.copiesTree": true,  // for the copy command
       "commandHandler.deletesTree": true, // for the delete command
@@ -139,7 +171,14 @@ class MainLayout extends LitElement{
           {
             selectionObjectName: "PANEL",
             isTreeExpanded: true,
-            isTreeLeaf: false
+            isTreeLeaf: false,
+            click: (e, obj)=> {  // OBJ is the Button
+              var node = obj.part;  // get the Node containing this Button
+              if (node === null) return;
+              this.selectedNode=node.data;
+              e.handled = true;
+
+            }
           },
           // the node's outer shape, which will surround the text
           this.goGraph(go.Panel, "Auto",
@@ -154,27 +193,18 @@ class MainLayout extends LitElement{
                   oVal.push(5);
                   oVal.push(10);
                 }
-
-
-                return oVal;
-              }),
-              new go.Binding("strokeWidth", "type", function(type) {
-                let oVal=null;
-                if(type==='empresa-confirmada'){
-                  oVal=3;
-                }
                 return oVal;
               }),
 
               new go.Binding("stroke", "type", function(type) {
                 let oVal=null;
-                if(type==='person'){
+                if(type==='person-search'){
                   oVal="#00701a";
                 }
                 if(type==='empresa-confirmada'){
                   oVal="#007c91";
                 }
-                if(type==='empresa'){
+                if(type==="empresa-search"){
                   oVal="#007c91";
                 }
                 if(type==='person-title'){
@@ -186,11 +216,31 @@ class MainLayout extends LitElement{
                 }
 
                 return oVal;
+              })
+              ,
+              new go.Binding("strokeWidth", "", function(data,node) {
+                if(data.accuracy!==undefined && data.accuracy>0.83){
+                  return data.accuracy*10;
+                }else{
+                  return 0.3;
+                }
+                
+              }),
+              
+              new go.Binding("opacity","",function(data,node){
+                if(data.active===undefined){
+                return data.accuracy!==undefined?data.accuracy:1;
+                }else{
+                 return data.active===false?0.5:1;
+                }
               }),
               new go.Binding("fill", "type", function(type) {
                 let oVal=null;
-                if(type==='person'){
+                if(type==="person-search"){
                   oVal="#76d275";
+                }
+                if(type==="person"){
+                  oVal="#48a999";
                 }
                 if(type==='person-title'){
                   oVal="#f5fd67";
@@ -200,23 +250,20 @@ class MainLayout extends LitElement{
                   oVal="#c0ca33";
                 }
 
-                if(type==='empresa-confirmada'){
+                if(type==='empresa-confirmada' || type==='empresa-search'){
                   oVal="#00acc1";
                 }
-                if(type==='empresa'){
+                if(type==='empresa' ){
                   oVal="#5ddef4";
                 }
                 return oVal;
-              })),
+              })
+              ),
               this.goGraph(go.TextBlock,
-              { font: "12pt Roboto,sans-serif", margin: 5 },
-              new go.Binding("text", "",function(data,node){
-                return (data.title===undefined?"":data.title)+"\n\n"+data.key+"\n\n"+data.type.split("-").join("\n");
-              }),
-              
+              { font: '12pt sans-serif', margin: 5 },
 
-              new go.Binding("opacity","type",function(type){
-                return type==='person'?"0.7":"0.7";
+              new go.Binding("text", "",function(data,node){
+                return ((data.title===undefined?"":data.title)+"\n\n"+data.key+"\n\n"+data.type.split("-").join("\n")).toLocaleUpperCase();
               })
               
               )
@@ -225,7 +272,7 @@ class MainLayout extends LitElement{
           this.goGraph("TreeExpanderButton",
             {
               name: 'TREEBUTTON',
-              width: 20, height: 20,
+              width: 110, height: 110,
               alignment: go.Spot.TopRight,
               alignmentFocus: go.Spot.Center,
               // customize the expander behavior to
@@ -249,6 +296,7 @@ class MainLayout extends LitElement{
 
 
   _handleSearch(searchTerm,type,rootNode,replaceParent){
+    console.log({handleSearch:{rootNode:rootNode}});
     var myHeaders = new Headers();
     /*myHeaders.set('Content-Type', 'application/json');
     myHeaders.set('Access-Control-Allow-Origin','*');
@@ -275,10 +323,13 @@ class MainLayout extends LitElement{
        }
        this.myDiagram.startTransaction("fillWithSearchResults");
        if(type==='persona'){
-        this.myDiagram.model.addNodeDataCollection(this._transformSearchPersonsToNode(myJson.objects,rootNode===null?{key:searchTerm,type:"search"}:rootNode));
+ //       this.myDiagram.model.addNodeDataCollection(this._transformSearchPersonsToNode(myJson.objects,rootNode===null?{key:searchTerm,type:"search"}:rootNode));
+        
+        this.myDiagram.model.addNodeDataCollection(this.nodeAdapter.transformPersonSearchResultsTo(myJson,rootNode,searchTerm));
        }
        if(type==='empresa'){
-        this.myDiagram.model.addNodeDataCollection(this._transformSearchEmpresaToNode(myJson.objects,rootNode===null?{key:searchTerm,type:"search"}:rootNode));
+//        this.myDiagram.model.addNodeDataCollection(this._transformSearchEmpresaToNode(myJson.objects,rootNode===null?{key:searchTerm,type:"search"}:rootNode));
+        this.myDiagram.model.addNodeDataCollection(this.nodeAdapter.transformCompaniesSearchResultsTo(myJson,rootNode,searchTerm));
        } 
 
        this.myDiagram.commitTransaction("fillWithSearchResults");
@@ -356,9 +407,18 @@ class MainLayout extends LitElement{
 
 
       // in the model data, each node is represented by a JavaScript object:
+
+         this.nodeAdapter.transformCompanyTo(myJson,rootNode.data).forEach((node)=>{
+          let myModel = this.myDiagram.model;
+          if(myModel.findNodeDataForKey(node.key)===null){
+            myModel.addNodeData(node);
+          }
+         });
      
-         myModel.addNodeDataCollection(this._transformCargosToNode(myJson,rootNode.data));
+       //  myModel.addNodeDataCollection(this.nodeAdapter.transformCompanyTo(myJson,rootNode.data));
          rootNode.data.expanded=true;
+         myModel.removeNodeData(rootNode.data);
+         
       
         this.myDiagram.commitTransaction("CollapseExpandTree");
           });/*.catch(function(error) {
@@ -367,6 +427,55 @@ class MainLayout extends LitElement{
         }
     
   }
+
+
+  _handlePersonDetails(rootNode){
+    if(rootNode.data.expanded===false || rootNode.data.expanded===undefined){
+    
+      fetch('http://localhost'+rootNode.data.resource_uri,
+      {
+        method:'GET',
+        mode: 'cors',
+        redirect:'follow'
+      })
+         .then(function(response) {
+          return response.json();
+         })
+         .then(myJson=>{
+          this.myDiagram.startTransaction("CollapseExpandTree");
+          console.log(myJson);
+             /// TEST MODEL
+         let myModel = this.myDiagram.model;
+
+
+
+      // in the model data, each node is represented by a JavaScript object:
+         //myModel.removeNodeData(rootNode.data);
+         this.nodeAdapter.transformPersonTo(myJson,rootNode.data).forEach((node)=>{
+          let myModel = this.myDiagram.model;
+            if(myModel.findNodeDataForKey(node.key)===null){
+              myModel.addNodeData(node);
+            }
+         });
+
+         //myModel.addNodeDataCollection(this.nodeAdapter.transformPersonTo(myJson,rootNode.data));
+         rootNode.data.expanded=true;
+         myModel.removeNodeData(rootNode.data);
+         
+       
+
+      
+        this.myDiagram.commitTransaction("CollapseExpandTree");
+          });/*.catch(function(error) {
+            console.log('Hubo un problema con la petición Fetch:' + error.message);
+          });;*/
+        }
+    
+  }
+
+
+
+  
 
   _transformCargosToNode(empresa,rootNodeData){
     let oVal=[];
@@ -417,6 +526,40 @@ class MainLayout extends LitElement{
       }
   }
 
+
+
+  render_selected_node_details(){
+    let oVal=[];
+    if(this.selectedNode!==null){
+
+      let propName=Object.getOwnPropertyNames(this.selectedNode);
+      for(let i=0;i<propName.length;i++){
+        oVal.push(html`<tr style="padding-bottom:8px;"><td>${propName[i]}</td><td>${JSON.stringify(this.selectedNode[propName[i]],null,"\t")}</td></tr>`);
+   /*    oVal.push(html `<li>1</li><li style="flex: 0 0 50%;
+       border: 1px solid grey;
+       padding: 1em;
+       display: flex;
+       align-items: flex-end;">${propName[i]} - ${JSON.stringify(this.selectedNode[propName[i]],null,"\t")} </li>`)*/
+      }
+    }
+     return html `<table style="font:12px Roboto;border-bottom:1px solid silver;opacity:0.58">
+        <thead >
+          <tr><th style="align:center">Property</th><th>Value</th></tr>
+          ${oVal}
+        </thead>
+      </table>`;
+      /*
+      return html`<ul style=" list-style-type: none;
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;">
+        ${oVal}
+      </ul>`*/
+  }
+
+
+
+
   render_top_bar(){
     return html` <mwc-top-app-bar class="light">
     <mwc-icon-button icon="menu" slot="navigationIcon"></mwc-icon-button>
@@ -451,9 +594,41 @@ class MainLayout extends LitElement{
 
       <div class="layout vertical wrap" >
       ${this.render_top_bar()}
+      <div class="layout horizontal wrap">
       <slot name="graphContainer"></slot>
+      <div class="layout vertical wrap" style="width:40%;">
+      <div style="border:1px solid silver;border-radius:3px;margin-top:60px;margin-left:8px;margin-right:8px;">
+        <div slot="header" style="font:medium Roboto;padding:4px;opacity:0.78;text-align: center;">Detalles del nodo seleccionado</div>
+        <div slot="content" style="padding:4px;">
+        ${this.render_selected_node_details()}
+        </div>
+      </div>
+      </div>
+      </div>
       </div>
   `;
+  }
+
+
+  _cypherTreeFromNode(rootNode){
+    console.log({cypherTreeFroNode_data:rootNode.data});
+
+   
+    console.log({cypherTreeFroNode_rootNode:rootNode});
+    let oVal=[];
+    
+    let it=rootNode.findTreeChildrenNodes();
+
+    while(it.next()){
+      let node=it.value;
+      console.log({travesing_tree:node});
+      oVal.push(node.data);
+    };
+
+    for(let i=0;i<oVal.length;i++){
+      oVal.concat(this._cypherTreeFromNode(oVal[i]));
+    }
+    return oVal;
   }
 }
 

@@ -4,6 +4,7 @@
   "description": "Lit element components for a borme navigator",
   "main": "index.js",
   "dependencies": {
+    "@authentic/mwc-card": "^0.5.14",
     "@authentic/mwc-icon-button": "^0.5.10",
     "@authentic/mwc-list": "^0.4.10",
     "@authentic/mwc-select": "^0.4.7",
@@ -13,6 +14,7 @@
     "@material/mwc-button": "^0.5.0",
     "@material/mwc-icon": "^0.5.0",
     "gojs": "^2.0.12",
+    "jaro-winkler": "^0.2.8",
     "lit-element": "^2.2.0",
     "lit-flexbox-literals": "0.0.7",
     "npm": "^6.9.0"
