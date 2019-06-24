@@ -604,6 +604,7 @@ class MainLayout extends LitElement{
         ${this.render_selected_node_details()}
         </div>
         <button @click=${(ev)=>{console.log({tree:GojsModelManager.getTree(this.myDiagram,this.selectedNode)})}}>Gen-Tree</button>
+        <button @click=${(ev)=>{console.log({tree:CypherProcessor.cypherTree(GojsModelManager.getTree(this.myDiagram,this.selectedNode))})}}>Gen-Cypher</button>
       </div>
       </div>
       </div>
