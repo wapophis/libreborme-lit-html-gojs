@@ -23,19 +23,50 @@ export class CypherProcessor{
    }
 
    static simpleCypherChildNodeRelation(parentLabel,parentProps,relLabel,relProps,childLabel,childProps){
-    let parentNode=CypherProcessor.simpleCypherNode(parentLabel,parentProps);
+    let rootNodeIsPresent=parentLabel!==null?true:false;
+
+    let parentNode=rootNodeIsPresent?CypherProcessor.simpleCypherNode(parentLabel,parentProps):"";
     let childNode=CypherProcessor.simpleCypherNode(childLabel,childProps);
-    let relation=CypherProcessor.simpleCypherRelation(relVariable,relLabel,relProps,"->");
+    let relation=rootNodeIsPresent?CypherProcessor.simpleCypherRelation(relLabel,relProps,"->"):"";
+    console.log(`${parentNode}${relation}${childNode}`);
     return `${parentNode}${relation}${childNode}`;
 }
 
    static cypherTree(nodeArray){
+       let oVal=[];
        for(let i=0;i<nodeArray.length;i++){
             let currentNode=nodeArray[i];
-            let parentNode=(i>0?nodeArray[i-1]:null);
-            CypherProcessor.simpleCypherChildNodeRelation(parentNode!==null?parentNode.type:"",parentNode,"relatesTo",{},currentNode.type,currentNode);
+            let currentRel=i>0?{label:"relatesTo",direction:"->"}:null;
+
+            if(currentRel!==null){
+                oVal.push(CypherProcessor.simpleCypherRelation(currentRel.label,{},currentRel.direction));
+            }
+
+            let childs=this._lookForChildrens(nodeArray.slice(i+1,nodeArray.length));
+            if(childs.length>1){
+                childs.forEach((child)=>{
+                    oVal.push(CypherProcessor.simpleCypherNode(currentNode.type,currentNode));
+                });
+            }else{
+            oVal.push(CypherProcessor.simpleCypherNode(currentNode.type,currentNode));
+            }
+
+            console.log(oVal);
        }
-   }
+    return oVal;
+    }
+
+    _lookForChildrens(nodeArray,propParentKey,parentValue){
+        let oVal=[];
+        for(let i=0;i<nodeArray.length;i++){
+            if(nodeArray[i].parent!==undefined && nodeArray[i].parent!==null && nodeArray[i].parent!==""){
+                if((nodeArray[i])[propParentKey]===parentValue){
+                        oVal.push(nodeArray[i]);
+                }
+            }
+        }
+        return oVal;
+    }
 }
 
 
@@ -66,16 +97,18 @@ class Rel{
 
      static simpleCypher(label,properties,direction){
         if(direction==="<-"){
-            return `<-[${label}{${templateLiteralParser(properties)}}]-`;
+            return `<-[:${label}{${templateLiteralParser(properties)}}]-`;
         }
 
         if(direction==="->"){
-            return `-[${label}{${templateLiteralParser(properties)}}]->`;
+            return `-[:${label}{${templateLiteralParser(properties)}}]->`;
         }
 
         if(direction==="<-->"){
-            return `<-[${label}{${templateLiteralParser(properties)}}]->`;
+            return `<-[:${label}{${templateLiteralParser(properties)}}]->`;
         }
+
+        return '--';
      }
  }
 
@@ -83,8 +116,7 @@ class Rel{
 function templateLiteralParser(object){
     let oVal=``;
     Object.getOwnPropertyNames(object).forEach((propName)=>{
-        oVal+=`${propName}:"${object[propName]}",`;
+        oVal+=`${propName}:'${object[propName]}',`;
     });
-    oVal.slice(0,oVal.length-1);
-    return oVal;
+    return oVal.slice(0,oVal.length-1);
 }

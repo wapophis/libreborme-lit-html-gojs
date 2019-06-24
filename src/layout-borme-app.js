@@ -12,6 +12,8 @@ import {CypherProcessor} from './cypher-processor';
 
 import {go} from "gojs/release/go-module";
 
+const BORME_PROXIED_AT="http://localhost:8080";
+
 
 class MainLayout extends LitElement{
   constructor() {
@@ -57,7 +59,7 @@ class MainLayout extends LitElement{
           });/*.catch(function(error) {
             console.log('Hubo un problema con la petición Fetch:' + error.message);
           });;*/
-        
+
           this._handlePersonDetails(ev.detail.node);
     }
     );
@@ -81,7 +83,7 @@ class MainLayout extends LitElement{
      */
     this.addEventListener('expand-empresa-confirmada', (ev)=>{
       console.log({empresa_confirmada:ev.detail});
-     
+
       this._handleCompanyDetails(ev.detail.node);
     });
 
@@ -100,7 +102,7 @@ class MainLayout extends LitElement{
       console.log({empresa_confirmada:ev.detail});
       console.log({expand_person:CypherProcessor.cypherNode("v","Person",ev.detail.node.data)});
       this._handlePersonDetails(ev.detail.node);
-      
+
     });
 
 
@@ -110,7 +112,7 @@ class MainLayout extends LitElement{
      */
     this.addEventListener('expand-empresa-title', (ev)=>{
       console.log({expand_empresa_title:ev.detail});
-      
+
       this._handleSearch(ev.detail.node.data.searchTerm,"empresa",ev.detail.node.data);
     });
 
@@ -124,7 +126,7 @@ class MainLayout extends LitElement{
   }
 
 
-  
+
 
 
   static get styles() {
@@ -149,7 +151,7 @@ class MainLayout extends LitElement{
   }
 
   _renderDiagramContainer(){
-    
+
     console.log("Rendering diagram container....");
     this.myDiagram=this.goGraph(go.Diagram, "myDiagramDiv",  // must name or refer to the DIV HTML element
     {
@@ -161,7 +163,7 @@ class MainLayout extends LitElement{
       "commandHandler.deletesTree": true, // for the delete command
       "draggingTool.dragsTree": true,  // dragging for both move and copy
       "undoManager.isEnabled": true,
-      
+
     });
 
      // Define the Node template.
@@ -186,7 +188,7 @@ class MainLayout extends LitElement{
             { name: "PANEL" },
             this.goGraph(go.Shape, "Circle",
               { fill: "whitesmoke", stroke: "black" },
-             
+
               new go.Binding("strokeDashArray", "type", function(type) {
                 let oVal=null;
                 if(type==='empresa' || type===("empresa-title") || type==="person-title"){
@@ -225,9 +227,9 @@ class MainLayout extends LitElement{
                 }else{
                   return 0.3;
                 }
-                
+
               }),
-              
+
               new go.Binding("opacity","",function(data,node){
                 if(data.active===undefined){
                 return data.accuracy!==undefined?data.accuracy:1;
@@ -266,7 +268,7 @@ class MainLayout extends LitElement{
               new go.Binding("text", "",function(data,node){
                 return ((data.title===undefined?"":data.title)+"\n\n"+data.key+"\n\n"+data.type.split("-").join("\n")).toLocaleUpperCase();
               })
-              
+
               )
           ),
           // the expand/collapse button, at the top-right corner
@@ -282,9 +284,9 @@ class MainLayout extends LitElement{
                 var node = obj.part;  // get the Node containing this Button
                 if (node === null) return;
                 e.handled = true;
-                this.dispatchEvent(new CustomEvent('expand-'+node.data.type, { 
+                this.dispatchEvent(new CustomEvent('expand-'+node.data.type, {
                   detail: { node: node },
-                  bubbles: true, 
+                  bubbles: true,
                   composed: true }));
               }
             }
@@ -303,7 +305,7 @@ class MainLayout extends LitElement{
     myHeaders.set('Access-Control-Allow-Origin','*');
     myHeaders.set('Access-Control-Allow-Methods','GET, POST, OPTIONS');*/
 
-    fetch('http://localhost/borme/api/v1/'+(type===null?this._getSearchType():type)+'/search/?q='+searchTerm+'&page=1',
+    fetch(BORME_PROXIED_AT+'/borme/api/v1/'+(type===null?this._getSearchType():type)+'/search/?q='+searchTerm+'&page=1',
     {
       method:'GET',
       mode: 'cors',
@@ -315,23 +317,23 @@ class MainLayout extends LitElement{
        })
        .then(myJson=>{
         console.log(myJson);
-      
+
 
            /// TEST MODEL
-       
+
         if(this.myDiagram.model.nodeDataArray.length===0){
-         this.myDiagram.model=this.goGraph(go.TreeModel);     
+         this.myDiagram.model=this.goGraph(go.TreeModel);
        }
        this.myDiagram.startTransaction("fillWithSearchResults");
        if(type==='persona'){
  //       this.myDiagram.model.addNodeDataCollection(this._transformSearchPersonsToNode(myJson.objects,rootNode===null?{key:searchTerm,type:"search"}:rootNode));
-        
+
         this.myDiagram.model.addNodeDataCollection(this.nodeAdapter.transformPersonSearchResultsTo(myJson,rootNode,searchTerm));
        }
        if(type==='empresa'){
 //        this.myDiagram.model.addNodeDataCollection(this._transformSearchEmpresaToNode(myJson.objects,rootNode===null?{key:searchTerm,type:"search"}:rootNode));
         this.myDiagram.model.addNodeDataCollection(this.nodeAdapter.transformCompaniesSearchResultsTo(myJson,rootNode,searchTerm));
-       } 
+       }
 
        this.myDiagram.commitTransaction("fillWithSearchResults");
 
@@ -340,7 +342,7 @@ class MainLayout extends LitElement{
         });;*/
   }
 
-  _transformSearchPersonsToNode(persons,rootNode){  
+  _transformSearchPersonsToNode(persons,rootNode){
     //let oVal=[{key:rootNode,type:'search'}];
     let oVal=[];
     for(let i=0;i<persons.length;i++){
@@ -356,7 +358,7 @@ class MainLayout extends LitElement{
   return oVal;}
 
 
-  _transformSearchEmpresaToNode(companies,rootNode){  
+  _transformSearchEmpresaToNode(companies,rootNode){
     //let oVal=[{key:rootNode,type:'search'}];
     let oVal=[];
     for(let i=0;i<companies.length;i++){
@@ -378,7 +380,7 @@ class MainLayout extends LitElement{
     for(let i=0;i<companies.length;i++){
       oVal.push({
         type:'empresa',
-        resource_uri:'http://localhost/borme/api/v1/'+'empresa'+'/search/?q='+companies[i]+'&page=1',
+        resource_uri:BORME_PROXIED_AT+'/borme/api/v1/'+'empresa'+'/search/?q='+companies[i]+'&page=1',
         slug:companies[i].split(" ").join("-"),
         key:companies[i].split(" ").join("\n"),
         parent:rootNode
@@ -389,8 +391,8 @@ class MainLayout extends LitElement{
 
   _handleCompanyDetails(rootNode){
     if(rootNode.data.expanded===false || rootNode.data.expanded===undefined){
-    
-      fetch('http://localhost'+rootNode.data.resource_uri,
+
+      fetch(BORME_PROXIED_AT+''+rootNode.data.resource_uri,
       {
         method:'GET',
         mode: 'cors',
@@ -415,25 +417,25 @@ class MainLayout extends LitElement{
             myModel.addNodeData(node);
           }
          });
-     
+
        //  myModel.addNodeDataCollection(this.nodeAdapter.transformCompanyTo(myJson,rootNode.data));
          rootNode.data.expanded=true;
          myModel.removeNodeData(rootNode.data);
-         
-      
+
+
         this.myDiagram.commitTransaction("CollapseExpandTree");
           });/*.catch(function(error) {
             console.log('Hubo un problema con la petición Fetch:' + error.message);
           });;*/
         }
-    
+
   }
 
 
   _handlePersonDetails(rootNode){
     if(rootNode.data.expanded===false || rootNode.data.expanded===undefined){
-    
-      fetch('http://localhost'+rootNode.data.resource_uri,
+
+      fetch(BORME_PROXIED_AT+rootNode.data.resource_uri,
       {
         method:'GET',
         mode: 'cors',
@@ -462,25 +464,25 @@ class MainLayout extends LitElement{
          //myModel.addNodeDataCollection(this.nodeAdapter.transformPersonTo(myJson,rootNode.data));
          rootNode.data.expanded=true;
          myModel.removeNodeData(rootNode.data);
-         
-       
 
-      
+
+
+
         this.myDiagram.commitTransaction("CollapseExpandTree");
           });/*.catch(function(error) {
             console.log('Hubo un problema con la petición Fetch:' + error.message);
           });;*/
         }
-    
+
   }
 
 
 
-  
+
 
   _transformCargosToNode(empresa,rootNodeData){
     let oVal=[];
-    
+
     // Cargos de empresa personas
     if(empresa.cargos_actuales_p.length>0){
       for(let i=0;i<empresa.cargos_actuales_p.length;i++){
@@ -500,12 +502,12 @@ class MainLayout extends LitElement{
           type:'empresa-title',
           key:(empresa.cargos_actuales_c[i].name.split(" ").join("\n")),
           title:empresa.cargos_actuales_c[i].title,
-          
+
           parent:rootNodeData===null?"":rootNodeData.key
         })
       }
     }
-    
+
     return oVal;
   }
 
@@ -518,7 +520,7 @@ class MainLayout extends LitElement{
     else{
       return this.searchTypeActive;
     }
-  
+
   }
 
   _handleSearchBoxKeys(key,target,type){
@@ -567,7 +569,7 @@ class MainLayout extends LitElement{
     <div slot="title" id="title">${this.title}</div>
     ${this.searchTypeActive==="persona"?html`<mwc-textfield label="Búsqueda" icon="people" slot="actionItems"
     placeholder="Persona o empresa a buscar"
-    
+
     @keydown=${(ev)=>this._handleSearchBoxKeys(ev.key,ev.target,"persona")}
     box
     class="light-input"></mwc-textfield>
@@ -578,7 +580,7 @@ class MainLayout extends LitElement{
     class="light-input"></mwc-textfield>
     `:html`<mwc-textfield label="Búsqueda" icon="search" slot="actionItems"
     placeholder="Persona o empresa a buscar"
-    
+
     @keydown=${(ev)=>this._handleSearchBoxKeys(ev.key,ev.target)}
     box
     class="light-input"></mwc-textfield>`}
@@ -588,7 +590,7 @@ class MainLayout extends LitElement{
   </mwc-top-app-bar>`;
   }
   render(){
-    
+
     return html`
 
     <!-- template content -->
@@ -604,7 +606,7 @@ class MainLayout extends LitElement{
         ${this.render_selected_node_details()}
         </div>
         <button @click=${(ev)=>{console.log({tree:GojsModelManager.getTree(this.myDiagram,this.selectedNode)})}}>Gen-Tree</button>
-        <button @click=${(ev)=>{console.log({tree:CypherProcessor.cypherTree(GojsModelManager.getTree(this.myDiagram,this.selectedNode))})}}>Gen-Cypher</button>
+        <button @click=${(ev)=>{console.log({tree:CypherProcessor.cypherTree(GojsModelManager.getTree(this.myDiagram,this.selectedNode)).join("")})}}>Gen-Cypher</button>
       </div>
       </div>
       </div>

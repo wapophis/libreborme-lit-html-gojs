@@ -17,6 +17,7 @@
     "jaro-winkler": "^0.2.8",
     "lit-element": "^2.2.0",
     "lit-flexbox-literals": "0.0.7",
+    "neo4j-driver": "^1.7.5",
     "npm": "^6.9.0"
   },
   "devDependencies": {
