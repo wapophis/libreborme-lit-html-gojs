@@ -10,11 +10,11 @@ export class GojsModelManager{
         };
 
         for(let i=0;i<oVal.length && i<it.count;i++){
-          console.log({index:i,rootNode:dataNode,processing_plane:oVal[i],length:oVal.length});
+        //  console.log({index:i,rootNode:dataNode,processing_plane:oVal[i],length:oVal.length});
           Array.prototype.push.apply(oVal, GojsModelManager.getTree(diagram,oVal[i]));
         }
 
-        console.log({dataNode:dataNode,oVal:oVal});
+       // console.log({dataNode:dataNode,oVal:oVal});
         return oVal;
     }
 }
