@@ -5,6 +5,7 @@ import {IconButton} from "@authentic/mwc-icon-button";
 import {TextField} from "@authentic/mwc-textfield";
 import {Card} from "@authentic/mwc-card";
 import {GoJsNodeAdapter} from './node-adapter';
+import {GojsModelManager} from './gojs-manager';
 import {CypherProcessor} from './cypher-processor';
 
 
@@ -602,6 +603,7 @@ class MainLayout extends LitElement{
         <div slot="content" style="padding:4px;">
         ${this.render_selected_node_details()}
         </div>
+        <button @click=${(ev)=>{console.log({tree:GojsModelManager.getTree(this.myDiagram,this.selectedNode)})}}>Gen-Tree</button>
       </div>
       </div>
       </div>
@@ -610,26 +612,7 @@ class MainLayout extends LitElement{
   }
 
 
-  _cypherTreeFromNode(rootNode){
-    console.log({cypherTreeFroNode_data:rootNode.data});
 
-   
-    console.log({cypherTreeFroNode_rootNode:rootNode});
-    let oVal=[];
-    
-    let it=rootNode.findTreeChildrenNodes();
-
-    while(it.next()){
-      let node=it.value;
-      console.log({travesing_tree:node});
-      oVal.push(node.data);
-    };
-
-    for(let i=0;i<oVal.length;i++){
-      oVal.concat(this._cypherTreeFromNode(oVal[i]));
-    }
-    return oVal;
-  }
 }
 
 
