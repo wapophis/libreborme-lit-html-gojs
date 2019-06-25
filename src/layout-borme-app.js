@@ -19,7 +19,7 @@ import {CypherProcessor} from './cypher-processor';
 
 import {go} from "gojs/release/go-module";
 
-const BORME_PROXIED_AT="http://localhost";
+const BORME_PROXIED_AT="http://localhost:8080";
 
 
 class MainLayout extends LitElement{
@@ -136,6 +136,7 @@ class MainLayout extends LitElement{
     this.addEventListener('expand-person-title', (ev)=>{
       console.log({empresa_confirmada_title:ev.detail});
       this._handleSearch(ev.detail.node.data.searchTerm,"persona",ev.detail.node.data);
+
     });
   }
 
@@ -170,8 +171,9 @@ class MainLayout extends LitElement{
     this.myDiagram=this.goGraph(go.Diagram, "myDiagramDiv",  // must name or refer to the DIV HTML element
     {
       initialContentAlignment: go.Spot.Center,
-      layout: this.goGraph(go.ForceDirectedLayout,{ arrangesToOrigin:false
-        ,maxIterations: 200, defaultSpringLength: 2500, defaultElectricalCharge:2500,epsilonDistance:10 }),
+      "toolManager.hoverDelay": 100,
+      layout: this.goGraph(go.ForceDirectedLayout,{ arrangesToOrigin:false,isInitial:true,isViewportSized:false
+        ,maxIterations: 20000, defaultSpringLength: 500, defaultElectricalCharge:1500,epsilonDistance:10 }),
       // moving and copying nodes also moves and copies their subtrees
       "commandHandler.copiesTree": true,  // for the copy command
       "commandHandler.deletesTree": true, // for the delete command
@@ -179,6 +181,11 @@ class MainLayout extends LitElement{
       "undoManager.isEnabled": true,
 
     });
+
+    /*this.myDiagram.toolManager.draggingTool.doMouseMove = function() {
+      go.DraggingTool.prototype.doMouseMove.call(this);
+      if (this.isActive) { this.diagram.layout.invalidateLayout(); }
+    }*/
 
      // Define the Node template.
       // This uses a Spot Panel to position a button relative
@@ -195,6 +202,13 @@ class MainLayout extends LitElement{
               this.selectedNode=node.data;
               e.handled = true;
 
+            },
+
+            mouseHover:(e, obj)=> {  // OBJ is the Button
+              var node = obj.part;  // get the Node containing this Button
+              if (node === null) return;
+              this.selectedNode=node.data;
+              e.handled = true;
             }
           },
           // the node's outer shape, which will surround the text
@@ -213,23 +227,26 @@ class MainLayout extends LitElement{
                 return oVal;
               }),
 
-              new go.Binding("stroke", "type", function(type) {
+              new go.Binding("stroke", "", function(data) {
                 let oVal=null;
-                if(type==='person-search'){
+                if(data.type==='person-search'){
                   oVal="#00701a";
                 }
-                if(type==='empresa-confirmada'){
+                if(data.type==='empresa-confirmada'){
                   oVal="#007c91";
                 }
-                if(type==="empresa-search"){
+                if(data.type==="empresa-search"){
                   oVal="#007c91";
                 }
-                if(type==='person-title'){
+                if(data.type==='person-title'){
                   oVal="#8c9900";
                 }
 
-                if(type==='empresa-title'){
+                if(data.type==='empresa-title'){
                   oVal="#8c9900";
+                }
+                if(data.parent===""){
+                  oVal="#e91e63";
                 }
 
                 return oVal;
@@ -239,6 +256,9 @@ class MainLayout extends LitElement{
                 if(data.accuracy!==undefined && data.accuracy>0.83){
                   return data.accuracy*10;
                 }else{
+                  if(data.parent===""){
+                    return 800;
+                  }
                   return 0.3;
                 }
 
@@ -251,28 +271,29 @@ class MainLayout extends LitElement{
                  return data.active===false?0.5:1;
                 }
               }),
-              new go.Binding("fill", "type", function(type) {
+              new go.Binding("fill", "", function(data,node) {
                 let oVal=null;
-                if(type==="person-search"){
+                if(data.type==="person-search"){
                   oVal="#76d275";
                 }
-                if(type==="person"){
+                if(data.type==="person"){
                   oVal="#48a999";
                 }
-                if(type==='person-title'){
+                if(data.type==='person-title'){
                   oVal="#f5fd67";
                 }
 
-                if(type==='empresa-title'){
+                if(data.type==='empresa-title'){
                   oVal="#c0ca33";
                 }
 
-                if(type==='empresa-confirmada' || type==='empresa-search'){
+                if(data.type==='empresa-confirmada' || data.type==='empresa-search'){
                   oVal="#00acc1";
                 }
-                if(type==='empresa' ){
+                if(data.type==='empresa' ){
                   oVal="#5ddef4";
                 }
+
                 return oVal;
               })
               ),
@@ -350,6 +371,7 @@ class MainLayout extends LitElement{
        }
 
        this.myDiagram.commitTransaction("fillWithSearchResults");
+       this.myDiagram.zoomToFit();
 
       });/*.catch(function(error) {
           console.log('Hubo un problema con la petición Fetch:' + error.message);
@@ -438,6 +460,7 @@ class MainLayout extends LitElement{
 
 
         this.myDiagram.commitTransaction("CollapseExpandTree");
+        this.myDiagram.zoomToFit();
           });/*.catch(function(error) {
             console.log('Hubo un problema con la petición Fetch:' + error.message);
           });;*/
@@ -483,6 +506,7 @@ class MainLayout extends LitElement{
 
 
         this.myDiagram.commitTransaction("CollapseExpandTree");
+        this.myDiagram.zoomToFit();
           });/*.catch(function(error) {
             console.log('Hubo un problema con la petición Fetch:' + error.message);
           });;*/
@@ -612,7 +636,7 @@ class MainLayout extends LitElement{
     return html`
 
     <!-- template content -->
-    <mwc-drawer hasHeader type="dismissible" open id="myDrawer">
+    <mwc-drawer hasHeader type="dismissible" id="myDrawer">
     <span slot="title">LibreBor.me</span>
     <span slot="subtitle">Graph Analizer</span>
     <div class="drawer-content">
@@ -625,7 +649,7 @@ class MainLayout extends LitElement{
       ${this.render_top_bar()}
       <div class="layout horizontal wrap ">
       <slot name="graphContainer"></slot>
-      <div class="layout vertical wrap" style="width:40%;">
+      <div class="layout vertical wrap" style="width:38%;">
       <div style="border:1px solid silver;border-radius:3px;margin-top:60px;margin-left:8px;margin-right:8px;">
         <div slot="header" style="font:medium Roboto;padding:4px;opacity:0.78;text-align: center;">Detalles del nodo seleccionado</div>
         <div slot="content" style="padding:4px;">
@@ -636,9 +660,34 @@ class MainLayout extends LitElement{
           ,(rootNode,childNode)=>{
             if(rootNode.type===NODE_TYPE_PERSON){
               if(childNode.type===NODE_TYPE_COMPANY_TITLE){
-                return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
+                //return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
+                return {var:null,props:null,label:"OCUPA_EL_CARGO",direction:"->"};
               }
             }
+
+            if(rootNode.type===NODE_TYPE_COMPANY_TITLE){
+              if(childNode.type===NODE_TYPE_COMPANY){
+                //return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
+                return {var:null,props:null,label:"DEL_CONSEJO_EN_LA_EMPRESA",direction:"->"};
+              }
+            }
+            if(rootNode.type===NODE_TYPE_COMPANY){
+              if(childNode.type===NODE_TYPE_PERSON_TITLE){
+                //return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
+                return {var:null,props:null,label:"DEL_CONSEJO_EN_LA_EMPRESA",direction:"<-"};
+              }
+            }
+            if(rootNode.type===NODE_TYPE_PERSON_TITLE){
+              if(childNode.type===NODE_TYPE_COMPANY){
+                //return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
+                return {var:null,props:null,label:"DEL_CONSEJO_EN_LA_EMPRESA",direction:"->"};
+              }
+              if(childNode.type===NODE_TYPE_PERSON){
+                //return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
+                return {var:null,props:null,label:"OCUPA_EL_CARGO",direction:"<-"};
+              }
+            }
+
             return {var:null,props:null,label:"ParentChild",direction:"->"};
           },"processed").join("")})}}>Gen-Cypher</button>
       </div>
