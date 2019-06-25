@@ -4,7 +4,14 @@ import {TopAppBar} from "@authentic/mwc-top-app-bar";
 import {IconButton} from "@authentic/mwc-icon-button";
 import {TextField} from "@authentic/mwc-textfield";
 import {Card} from "@authentic/mwc-card";
-import {GoJsNodeAdapter} from './node-adapter';
+import {Drawer} from "@authentic/mwc-drawer";
+import {GoJsNodeAdapter
+,NODE_TYPE_COMPANIES_SEARCH_RESULT
+,NODE_TYPE_COMPANY
+,NODE_TYPE_COMPANY_TITLE
+,NODE_TYPE_PERSON
+,NODE_TYPE_PERSON_SEARCH_RESULT
+,NODE_TYPE_PERSON_TITLE} from './node-adapter';
 import {GojsModelManager} from './gojs-manager';
 import {CypherProcessor} from './cypher-processor';
 
@@ -608,12 +615,39 @@ class MainLayout extends LitElement{
         <button @click=${(ev)=>{console.log({tree:GojsModelManager.getFlatTree(this.myDiagram,this.selectedNode)})}}>Gen-Tree</button>
         <button @click=${(ev)=>{console.log({tree:CypherProcessor.cypherTree(GojsModelManager.getFlatTree(this.myDiagram,this.selectedNode)
           ,(rootNode,childNode)=>{
+            if(rootNode.type===NODE_TYPE_PERSON){
+              if(childNode.type===NODE_TYPE_COMPANY_TITLE){
+                return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
+              }
+            }
             return {var:null,props:null,label:"ParentChild",direction:"->"};
           },"processed").join("")})}}>Gen-Cypher</button>
       </div>
       </div>
       </div>
       </div>
+
+      <mwc-drawer hasHeader type="dismissible">
+    <span slot="title">Drawer Title</span>
+    <span slot="subtitle">subtitle</span>
+    <div class="drawer-content">
+      <p>Drawer content</p>
+      <mwc-icon-button icon="gesture"></mwc-icon-button>
+      <mwc-icon-button icon="gavel"></mwc-icon-button>
+    </div>
+    <div slot="appContent">
+      <mwc-top-app-bar>
+        <mwc-icon-button slot="navigationIcon" icon="menu"></mwc-icon-button>
+        <div slot="title">Title</div>
+      </mwc-top-app-bar>
+      <div class="main-content">
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+      </div>
+    </div>
+  </mwc-drawer>
   `;
   }
 

@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "@authentic/mwc-card": "^0.5.14",
+    "@authentic/mwc-drawer": "^0.5.16",
     "@authentic/mwc-icon-button": "^0.5.10",
     "@authentic/mwc-list": "^0.4.10",
     "@authentic/mwc-select": "^0.4.7",
