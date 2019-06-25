@@ -468,7 +468,10 @@ class MainLayout extends LitElement{
 
   }
 
-
+  /**
+   * Fetch details for person data node type
+   * @param {*} rootNode
+   */
   _handlePersonDetails(rootNode){
     if(rootNode.data.expanded===false || rootNode.data.expanded===undefined){
 
@@ -482,8 +485,7 @@ class MainLayout extends LitElement{
           return response.json();
          })
          .then(myJson=>{
-          this.myDiagram.startTransaction("CollapseExpandTree");
-          console.log(myJson);
+          this.myDiagram.startTransaction("Expand-"+rootNode.data.type);
              /// TEST MODEL
          let myModel = this.myDiagram.model;
 
@@ -491,7 +493,8 @@ class MainLayout extends LitElement{
 
       // in the model data, each node is represented by a JavaScript object:
          //myModel.removeNodeData(rootNode.data);
-         this.nodeAdapter.transformPersonTo(myJson,rootNode.data).forEach((node)=>{
+         this.nodeAdapter.transformPersonToNetwork(myJson,rootNode.data).forEach((node)=>{
+           console.log({node:node});
           let myModel = this.myDiagram.model;
             if(myModel.findNodeDataForKey(node.key)===null){
               myModel.addNodeData(node);
@@ -505,7 +508,7 @@ class MainLayout extends LitElement{
 
 
 
-        this.myDiagram.commitTransaction("CollapseExpandTree");
+        this.myDiagram.commitTransaction("Expand-"+rootNode.data.type);
         this.myDiagram.zoomToFit();
           });/*.catch(function(error) {
             console.log('Hubo un problema con la petición Fetch:' + error.message);
@@ -668,19 +671,27 @@ class MainLayout extends LitElement{
             if(rootNode.type===NODE_TYPE_COMPANY_TITLE){
               if(childNode.type===NODE_TYPE_COMPANY){
                 //return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
-                return {var:null,props:null,label:"DEL_CONSEJO_EN_LA_EMPRESA",direction:"->"};
+                return {var:null,props:null,label:"EN_LA_EMPRESA",direction:"->"};
               }
             }
             if(rootNode.type===NODE_TYPE_COMPANY){
               if(childNode.type===NODE_TYPE_PERSON_TITLE){
                 //return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
-                return {var:null,props:null,label:"DEL_CONSEJO_EN_LA_EMPRESA",direction:"<-"};
+                return {var:null,props:null,label:"TIENE_EN_EL_CONSEJO_COMO",direction:"->"};
               }
+
+              if(childNode.type===NODE_TYPE_COMPANY_TITLE){
+                //return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
+                return {var:null,props:null,label:"OCUPA_EL_CARGO_DE",direction:"->"};
+              }
+
+
+
             }
             if(rootNode.type===NODE_TYPE_PERSON_TITLE){
               if(childNode.type===NODE_TYPE_COMPANY){
                 //return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};
-                return {var:null,props:null,label:"DEL_CONSEJO_EN_LA_EMPRESA",direction:"->"};
+                return {var:null,props:null,label:"EN_LA_EMPRESA",direction:"->"};
               }
               if(childNode.type===NODE_TYPE_PERSON){
                 //return {var:null,props:null,label:childNode.title.replace(" ","").replace(new RegExp("\\.","g"),"_"),direction:"->"};

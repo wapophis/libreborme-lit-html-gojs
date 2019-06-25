@@ -1,4 +1,6 @@
 import {SearchResultSet,PersonDetail, CompanyDetail} from './borme-adapter';
+import {BormeClient} from './borme-http-client';
+
 import {levenshteinDistance,damerauLevensteing, segmentedDistance, jarowinklerDistance} from './utils';
 
 export const NODE_TYPE_PERSON_SEARCH_RESULT="person-search";
@@ -11,16 +13,15 @@ export const NODE_TYPE_PERSON="person";
 
 export class GoJsNodeAdapter  {
 
-    
     /**
      * Transformación de los resultados de búsqueda a nodos de tipo búsqueda para personas
-     * @param {*} inputArray 
-     * @param {*} rootNodeData 
+     * @param {*} inputArray
+     * @param {*} rootNodeData
      */
     transformPersonSearchResultsTo(inputArray,rootNodeData,searchTerm){
         let oVal=[];
         let searchResultSet=new SearchResultSet(inputArray,NODE_TYPE_PERSON_SEARCH_RESULT);
-   
+
         for(let i=0;i<searchResultSet.objects.length;i++){
             oVal.push({
                 type:NODE_TYPE_PERSON_SEARCH_RESULT,
@@ -42,8 +43,8 @@ export class GoJsNodeAdapter  {
             ,jaro_winkler_reverse:jarowinklerDistance(searchResultSet.objects[i].slug.split("-").reverse().join(""),searchTerm)
             ,segmented_distance:segmentedDistance(searchResultSet.objects[i].slug,searchTerm,"-")
             ,from:searchResultSet.objects[i].slug.split("-").join(" ")}); */
-        
-            
+
+
 
         }
         console.log(oVal);
@@ -52,8 +53,8 @@ export class GoJsNodeAdapter  {
 
     /**
      * Transformación de los resultados de búsqueda de una empresa a nodos de tipo busqueda de empresa
-     * @param {*} inputArray 
-     * @param {*} rootNodeData 
+     * @param {*} inputArray
+     * @param {*} rootNodeData
      */
     transformCompaniesSearchResultsTo(inputArray,rootNodeData,searchTerm){
         let oVal=[];
@@ -74,7 +75,7 @@ export class GoJsNodeAdapter  {
 
 
     transformCompaniesTo(inputArray,rootNodeData){
-       
+
     }
 
 
@@ -82,9 +83,9 @@ export class GoJsNodeAdapter  {
 
 
     /**
-     * 
-     * @param {*} inputJson 
-     * @param {*} rootNodeData 
+     *
+     * @param {*} inputJson
+     * @param {*} rootNodeData
      */
     transformCompanyTo(inputJson,rootNodeData){
         let oVal=[];
@@ -158,14 +159,16 @@ export class GoJsNodeAdapter  {
     }
 
     /**
-     * Método para transformar una persona de la api a un conjunto de nodos relacionados 
-     * @param {*} inputJson 
-     * @param {*} rootNodeData 
+     *
+     * Método para transformar una persona de la api a un conjunto de nodos relacionados
+     * @deprecated
+     * @param {*} inputJson
+     * @param {*} rootNodeData
      */
     transformPersonTo(inputJson,rootNodeData){
         console.log({transformPersonTo:inputJson,rootNodeData:rootNodeData});
         let oVal=[];
-       
+
         let myPerson=new PersonDetail(inputJson);
             oVal.push({
                 type:NODE_TYPE_PERSON,
@@ -176,8 +179,8 @@ export class GoJsNodeAdapter  {
                 person:myPerson,
                 expanded:true,
                 parent:rootNodeData===null?"":(rootNodeData.parent!==""?rootNodeData.parent:"")
-            }); 
-           
+            });
+
 
             for(let i=0;i<myPerson.cargos_actuales.length;i++){
                 oVal.push({
@@ -190,6 +193,47 @@ export class GoJsNodeAdapter  {
                     parent:myPerson.slug
                 });
             }
+        return oVal;
+    }
+
+     /**
+     * Método para transformar una persona de la api a un conjunto de nodos relacionados
+     * @param {*} inputJson
+     * @param {*} rootNodeData
+     */
+    transformPersonToNetwork(inputJson,rootNodeData){
+        console.log({transformPersonTo:inputJson,rootNodeData:rootNodeData});
+        let oVal=[];
+        let relations=[];
+
+        let myPerson=new PersonDetail(inputJson);
+            oVal.push({
+                type:NODE_TYPE_PERSON,
+                key:myPerson.slug,
+                slug:myPerson.slug,
+                resource_uri:myPerson.resource_uri,
+                name:myPerson.name,
+                person:myPerson,
+                expanded:true,
+                parent:rootNodeData===null?"":(rootNodeData.parent!==""?rootNodeData.parent:"")
+            });
+
+
+            for(let i=0;i<myPerson.cargos_actuales.length;i++){
+                BormeClient.searchEmpresa("http://localhost:8080",myPerson.cargos_actuales[i].name).then(myJson=>{
+                    oVal.push(this.transformCompaniesSearchResultsTo(myJson,rootNodeData,myPerson.cargos_actuales[i].name));
+                });
+              /*  oVal.push({
+                    type:NODE_TYPE_COMPANIES_SEARCH_RESULT,
+                    key:myPerson.cargos_actuales[i].title+":"+myPerson.cargos_actuales[i].name,
+                    title:myPerson.cargos_actuales[i].title,
+                    parent:myPerson.slug,
+                    active:true,
+                    searchTerm:myPerson.cargos_actuales[i].name,
+                    parent:myPerson.slug
+                });*/
+            }
+            console.log(oVal);
         return oVal;
     }
 }
