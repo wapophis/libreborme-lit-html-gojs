@@ -39,6 +39,13 @@ class MainLayout extends LitElement{
   }
 
   firstUpdated(changedProperties) {
+
+    let drawer = this.shadowRoot.getElementById('myDrawer');
+    let container = drawer.parentNode;
+      container.addEventListener('MDCTopAppBar:nav', (e) => {
+       drawer.open = !drawer.open;
+    });
+
     this.addEventListener('expand-person', (ev)=>{/*
       fetch('http://localhost'+ev.detail.node.data.resource_uri,
       {
@@ -596,15 +603,27 @@ class MainLayout extends LitElement{
     <mwc-icon-button icon="clear" slot="actionItems" @click=${(ev)=>this.myDiagram.model.nodeDataArray=[]}></mwc-icon-button>
   </mwc-top-app-bar>`;
   }
+
+  render_drawer(){
+    return html``;
+  }
   render(){
 
     return html`
 
     <!-- template content -->
+    <mwc-drawer hasHeader type="dismissible" open id="myDrawer">
+    <span slot="title">LibreBor.me</span>
+    <span slot="subtitle">Graph Analizer</span>
+    <div class="drawer-content">
+      <p>Drawer content</p>
+      <mwc-icon-button icon="gesture"></mwc-icon-button>
+      <mwc-icon-button icon="gavel" id="gavel"></mwc-icon-button>
+    </div>
 
-      <div class="layout vertical wrap" >
+      <div class="layout vertical wrap" slot="appContent">
       ${this.render_top_bar()}
-      <div class="layout horizontal wrap">
+      <div class="layout horizontal wrap ">
       <slot name="graphContainer"></slot>
       <div class="layout vertical wrap" style="width:40%;">
       <div style="border:1px solid silver;border-radius:3px;margin-top:60px;margin-left:8px;margin-right:8px;">
@@ -625,29 +644,13 @@ class MainLayout extends LitElement{
       </div>
       </div>
       </div>
-      </div>
 
-      <mwc-drawer hasHeader type="dismissible">
-    <span slot="title">Drawer Title</span>
-    <span slot="subtitle">subtitle</span>
-    <div class="drawer-content">
-      <p>Drawer content</p>
-      <mwc-icon-button icon="gesture"></mwc-icon-button>
-      <mwc-icon-button icon="gavel"></mwc-icon-button>
-    </div>
-    <div slot="appContent">
-      <mwc-top-app-bar>
-        <mwc-icon-button slot="navigationIcon" icon="menu"></mwc-icon-button>
-        <div slot="title">Title</div>
-      </mwc-top-app-bar>
       <div class="main-content">
         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+            </div>
       </div>
-    </div>
-  </mwc-drawer>
+
+      </mwc-drawer>
   `;
   }
 
