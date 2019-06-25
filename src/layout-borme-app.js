@@ -12,7 +12,7 @@ import {CypherProcessor} from './cypher-processor';
 
 import {go} from "gojs/release/go-module";
 
-const BORME_PROXIED_AT="http://localhost:8080";
+const BORME_PROXIED_AT="http://localhost";
 
 
 class MainLayout extends LitElement{
@@ -605,8 +605,11 @@ class MainLayout extends LitElement{
         <div slot="content" style="padding:4px;">
         ${this.render_selected_node_details()}
         </div>
-        <button @click=${(ev)=>{console.log({tree:GojsModelManager.getTree(this.myDiagram,this.selectedNode)})}}>Gen-Tree</button>
-        <button @click=${(ev)=>{console.log({tree:CypherProcessor.cypherTree(GojsModelManager.getTree(this.myDiagram,this.selectedNode)).join("")})}}>Gen-Cypher</button>
+        <button @click=${(ev)=>{console.log({tree:GojsModelManager.getFlatTree(this.myDiagram,this.selectedNode)})}}>Gen-Tree</button>
+        <button @click=${(ev)=>{console.log({tree:CypherProcessor.cypherTree(GojsModelManager.getFlatTree(this.myDiagram,this.selectedNode)
+          ,(rootNode,childNode)=>{
+            return {var:null,props:null,label:"ParentChild",direction:"->"};
+          },"processed").join("")})}}>Gen-Cypher</button>
       </div>
       </div>
       </div>

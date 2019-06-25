@@ -1,3 +1,7 @@
+/**
+ * This is a cypher processor for a flat tree expressed as an array of nodes coming from gojs format.
+ */
+
 export class CypherProcessor{
    static cypherNode(variable,label,node){
         return Cnode.cypher(variable,label,node);
@@ -32,31 +36,51 @@ export class CypherProcessor{
     return `${parentNode}${relation}${childNode}`;
 }
 
-   static cypherTree(nodeArray){
+
+    /**
+     * Cypher a tree expressed as a node array with parent-child relationships.
+     * @param {*} nodeArray 
+     * @param {Function} relationshipParseFunction Function to parse relations, must return an object in cypher format like {var:variable,label:label,props:properties,direction:->|<-|-><-}
+     * @param {String} processedPropertyKey String with the property key wich control if node has been cyphered.
+     */
+   static cypherTree(nodeArray,relationshipParseFunction,processedPropertyKey){
        let oVal=[];
        for(let i=0;i<nodeArray.length;i++){
             let currentNode=nodeArray[i];
-            let currentRel=i>0?{label:"relatesTo",direction:"->"}:null;
+            let isRootNode=(i===0);
+            let childs=CypherProcessor._lookForChildrens(nodeArray.slice(i+1,nodeArray.length),"parent",currentNode.key);
+            console.log({rootNode:currentNode,childs:childs});
+            let hasChilds=(childs.length>0);
+            let cypheredChilds=[];
+            let cypheredRel=null;
 
-            if(currentRel!==null){
-                oVal.push(CypherProcessor.simpleCypherRelation(currentRel.label,{},currentRel.direction));
+            if(currentNode[processedPropertyKey]===false || currentNode[processedPropertyKey]===undefined){
+                oVal.push(',');
+                oVal.push(CypherProcessor.cypherNode("node_"+currentNode.__gohashid,currentNode.type.replace("-","_"),currentNode));
+                currentNode[processedPropertyKey]=true;
             }
 
-            let childs=this._lookForChildrens(nodeArray.slice(i+1,nodeArray.length));
-            if(childs.length>1){
-                childs.forEach((child)=>{
-                    oVal.push(CypherProcessor.simpleCypherNode(currentNode.type,currentNode));
-                });
-            }else{
-            oVal.push(CypherProcessor.simpleCypherNode(currentNode.type,currentNode));
+            for(let j=0;hasChilds && j<childs.length;j++){
+                oVal.push(',');
+                oVal.push(CypherProcessor.cypherNode("node_"+currentNode.__gohashid));
+                cypheredRel= relationshipParseFunction(currentNode,childs[j]);
+                oVal.push(CypherProcessor.cypherRelation(cypheredRel.var,cypheredRel.label,cypheredRel.props,cypheredRel.direction));
+                oVal.push(CypherProcessor.cypherNode("node_"+childs[j].__gohashid,childs[j].type.replace("-","_"),childs[j]));
+                childs[j][processedPropertyKey]=true;
             }
 
             console.log(oVal);
        }
+
+       for(let i=0;i<nodeArray.length;i++){
+           nodeArray[i][processedPropertyKey]=false;
+       }
     return oVal;
     }
 
-    _lookForChildrens(nodeArray,propParentKey,parentValue){
+ 
+
+    static _lookForChildrens(nodeArray,propParentKey,parentValue){
         let oVal=[];
         for(let i=0;i<nodeArray.length;i++){
             if(nodeArray[i].parent!==undefined && nodeArray[i].parent!==null && nodeArray[i].parent!==""){
@@ -72,6 +96,23 @@ export class CypherProcessor{
 
 class Cnode{
    static cypher(variable,label,properties){
+       if((label===undefined || label===null) && (properties===undefined || properties===null)){
+            if(variable===undefined || variable===null){
+                throw Error("Cannot parse without variable");
+            }
+        return `(${variable})`;
+       }
+
+       if((label===undefined || label===null)){
+           if(variable===undefined || variable===null){
+               throw Error("Cannot parse without variable");
+           }
+        return `(${variable}{${templateLiteralParser(properties)}})`;
+        }
+
+        if(variable===undefined || variable===null){
+            return `(${label}{${templateLiteralParser(properties)}})`;
+        }
         return `(${variable}:${label}{${templateLiteralParser(properties)}})`;
     }
 
@@ -82,6 +123,14 @@ class Cnode{
 
 class Rel{
     static cypher(variable,label,properties,direction){
+        if(properties===undefined || properties===null){
+            properties={};
+        }
+
+        if(variable===undefined || variable===null){
+            return Rel.simpleCypher(label,properties,direction);
+        }
+
         if(direction==="<-"){
             return `<-[${variable}:${label}{${templateLiteralParser(properties)}}]-`;
         }
