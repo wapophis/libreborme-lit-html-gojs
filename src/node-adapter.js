@@ -1,5 +1,6 @@
 import {SearchResultSet,PersonDetail, CompanyDetail} from './borme-adapter';
 import {BormeClient} from './borme-http-client';
+import {sleeper} from './utils';
 
 import {levenshteinDistance,damerauLevensteing, segmentedDistance, jarowinklerDistance} from './utils';
 
@@ -12,6 +13,10 @@ export const NODE_TYPE_PERSON="person";
 
 
 export class GoJsNodeAdapter  {
+
+    constructor(eventsTarget){
+        this.eventsTarget=eventsTarget;
+    }
 
     /**
      * Transformación de los resultados de búsqueda a nodos de tipo búsqueda para personas
@@ -201,27 +206,51 @@ export class GoJsNodeAdapter  {
      * @param {*} inputJson
      * @param {*} rootNodeData
      */
-    transformPersonToNetwork(inputJson,rootNodeData){
+    async transformPersonToNetwork(inputJson,rootNodeData){
         console.log({transformPersonTo:inputJson,rootNodeData:rootNodeData});
         let oVal=[];
         let relations=[];
 
         let myPerson=new PersonDetail(inputJson);
-            oVal.push({
-                type:NODE_TYPE_PERSON,
-                key:myPerson.slug,
-                slug:myPerson.slug,
-                resource_uri:myPerson.resource_uri,
-                name:myPerson.name,
-                person:myPerson,
-                expanded:true,
-                parent:rootNodeData===null?"":(rootNodeData.parent!==""?rootNodeData.parent:"")
-            });
+        let rootNode={
+            type:NODE_TYPE_PERSON,
+            key:myPerson.slug,
+            slug:myPerson.slug,
+            resource_uri:myPerson.resource_uri,
+            name:myPerson.name,
+            person:myPerson,
+            expanded:true,
+            parent:rootNodeData===null?"":(rootNodeData.parent!==""?rootNodeData.parent:"")
+        };
+         //   oVal.push(rootNode);
+            this.eventsTarget.dispatchEvent(new CustomEvent('addNodeToNetwork', {
+                detail: { node: rootNode },
+                bubbles: true,
+                composed: true }));
+
 
 
             for(let i=0;i<myPerson.cargos_actuales.length;i++){
-                BormeClient.searchEmpresa("http://localhost:8080",myPerson.cargos_actuales[i].name).then(myJson=>{
-                    oVal.push(this.transformCompaniesSearchResultsTo(myJson,rootNodeData,myPerson.cargos_actuales[i].name));
+              await BormeClient.searchEmpresa("http://localhost",myPerson.cargos_actuales[i].name).then(sleeper(1000)).then(myJson=>{
+                    let searchResults=this.transformCompaniesSearchResultsTo(myJson,rootNode,myPerson.cargos_actuales[i].name);
+                    searchResults.forEach(async node=>{
+                        if(node.accuracy>=0.75){
+                                await BormeClient.loadEmpresa("http://localhost",node.resource_uri).then(
+                                    data=>{
+                                        console.log({data_in_promise:data,node:this.transformCompanyTo(data,rootNode)});
+                                        this.eventsTarget.dispatchEvent(new CustomEvent('addNodeToNetwork', {
+                                            detail: { nodes: this.transformCompanyTo(data,rootNode) },
+                                            bubbles: true,
+                                            composed: true }));
+                                       // Array.prototype.push.apply(oVal,this.transformCompanyTo(data,rootNode));
+                                    }
+                                );
+                               // oVal.push(node);
+                        }else{
+                            console.log({NODO_DESCARTADO:node});
+                        }
+                    });
+                    //Array.prototype.push.apply(oVal,this.transformCompaniesSearchResultsTo(myJson,rootNode,myPerson.cargos_actuales[i].name));
                 });
               /*  oVal.push({
                     type:NODE_TYPE_COMPANIES_SEARCH_RESULT,
@@ -233,7 +262,7 @@ export class GoJsNodeAdapter  {
                     parent:myPerson.slug
                 });*/
             }
-            console.log(oVal);
+            console.log({transformPersonToNetwork:oVal});
         return oVal;
     }
 }

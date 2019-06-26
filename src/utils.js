@@ -176,3 +176,14 @@ export function levenshteinDistance(a, b) {
   
       return weight;
     }
+
+
+/**
+ * https://stackoverflow.com/questions/38956121/how-to-add-delay-to-promise-inside-then
+ * @param {*} ms 
+ */
+   export function sleeper(ms) {
+      return function(x) {
+        return new Promise(resolve => setTimeout(() => resolve(x), ms));
+      };
+    }

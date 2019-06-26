@@ -19,7 +19,7 @@ import {CypherProcessor} from './cypher-processor';
 
 import {go} from "gojs/release/go-module";
 
-const BORME_PROXIED_AT="http://localhost:8080";
+const BORME_PROXIED_AT="http://localhost";
 
 
 class MainLayout extends LitElement{
@@ -31,7 +31,7 @@ class MainLayout extends LitElement{
     this.searchTypeActive=null;
     this.goGraph=go.GraphObject.make;
     this.myDiagram=null;
-    this.nodeAdapter=new GoJsNodeAdapter();
+    this.nodeAdapter=new GoJsNodeAdapter(this);
     this.selectedNode=null;
 
     this.updateComplete.then(() => { this._renderDiagramContainer()});
@@ -44,6 +44,19 @@ class MainLayout extends LitElement{
     let container = drawer.parentNode;
       container.addEventListener('MDCTopAppBar:nav', (e) => {
        drawer.open = !drawer.open;
+    });
+
+    this.addEventListener('addNodeToNetwork',(ev)=>{
+      this.myDiagram.startTransaction("1");
+      console.log({event:'addNodeToNetwork',detail:ev.detail})
+      if(ev.detail.node!==undefined){
+      this.myDiagram.model.addNodeData(ev.detail.node);
+      }
+      if(ev.detail.nodes!==undefined){
+        this.myDiagram.model.addNodeDataCollection(ev.detail.nodes);
+        }
+        this.myDiagram.commitTransaction("1");
+        this.myDiagram.zoomToFit();
     });
 
     this.addEventListener('expand-person', (ev)=>{/*
@@ -493,23 +506,40 @@ class MainLayout extends LitElement{
 
       // in the model data, each node is represented by a JavaScript object:
          //myModel.removeNodeData(rootNode.data);
-         this.nodeAdapter.transformPersonToNetwork(myJson,rootNode.data).forEach((node)=>{
+
+         // V.0
+        /* this.nodeAdapter.transformPersonToNetwork(myJson,rootNode.data).forEach((node)=>{
            console.log({node:node});
           let myModel = this.myDiagram.model;
             if(myModel.findNodeDataForKey(node.key)===null){
               myModel.addNodeData(node);
             }
-         });
+         });*/
+         console.log({query_for:myJson,rootNode:rootNode.data});
+        this.nodeAdapter.transformPersonToNetwork(myJson,rootNode.data).then(
+           nodeArray =>{
+            nodeArray.forEach((node)=>{
+              console.log({node:node});
+             let myModel = this.myDiagram.model;
+               if(myModel.findNodeDataForKey(node.key)===null){
+                 myModel.addNodeData(node);
+               }
+           });
+
+           rootNode.data.expanded=true;
+           myModel.removeNodeData(rootNode.data);
+           this.myDiagram.commitTransaction("Expand-"+rootNode.data.type);
+           this.myDiagram.zoomToFit();
+  
+          }
+         );
 
          //myModel.addNodeDataCollection(this.nodeAdapter.transformPersonTo(myJson,rootNode.data));
-         rootNode.data.expanded=true;
-         myModel.removeNodeData(rootNode.data);
+       
 
 
 
-
-        this.myDiagram.commitTransaction("Expand-"+rootNode.data.type);
-        this.myDiagram.zoomToFit();
+       
           });/*.catch(function(error) {
             console.log('Hubo un problema con la petición Fetch:' + error.message);
           });;*/
