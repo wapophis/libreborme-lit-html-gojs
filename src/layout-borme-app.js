@@ -18,8 +18,9 @@ import {CypherProcessor} from './cypher-processor';
 
 
 import {go} from "gojs/release/go-module";
+import { BormeClient } from './borme-http-client';
 
-const BORME_PROXIED_AT="http://localhost";
+const BORME_PROXIED_AT="http://localhost:8080";
 
 
 class MainLayout extends LitElement{
@@ -52,7 +53,7 @@ class MainLayout extends LitElement{
       let nodesToAdd=[];
       if(ev.detail.node!==undefined){
         let checkNodeExists=this.myDiagram.findNodeForKey(ev.detail.node.key);
-      
+
         if(checkNodeExists!==null){
           this.myDiagram.model.commit(m=>m.removeNodeData(ev.detail.node));
         }
@@ -79,7 +80,7 @@ class MainLayout extends LitElement{
 
 
         ev.detail.relations.forEach(rel=>{
-            console.log({rel:rel,exists:this.myDiagram.model.findLinkDataForKey(rel.key)});
+            console.log({rel:rel,exists:this.myDiagram.findLinksByExample(rel).count});
         });
 
 
@@ -184,8 +185,21 @@ class MainLayout extends LitElement{
      */
     this.addEventListener('expand-person-title', (ev)=>{
       console.log({empresa_confirmada_title:ev.detail});
-      this._handleSearch(ev.detail.node.data.searchTerm,"persona",ev.detail.node.data);
+      //this._handleSearch(ev.detail.node.data.searchTerm,"persona",ev.detail.node.data);
+      if(!ev.detail.node.data.expanded){
+          BormeClient.searchPersona(BORME_PROXIED_AT,ev.detail.node.data.searchTerm).then(data=>{
+            let searchResults=this.nodeAdapter.transformPersonSearchResultsTo(data,ev.detail.node.data,ev.detail.node.data.searchTerm);
+            searchResults.forEach(snode=>{
+                if(snode.accuracy===1){ /// EXACT MATCH AUTO SEARCH
+                  this._handlePersonDetails({data:snode});
+                }else{
+                  console.log({NODO_DESCARTADO:snode});
+                }
+            });
 
+          });
+          ev.detail.node.data.expanded=true;
+    }
     });
   }
 
@@ -368,11 +382,13 @@ class MainLayout extends LitElement{
                 var node = obj.part;  // get the Node containing this Button
                 if (node === null) return;
                 e.handled = true;
-                this.dispatchEvent(new CustomEvent('expand-'+node.data.type, {
-                  detail: { node: node },
-                  bubbles: true,
-                  composed: true }));
-              }
+                if(!node.data.expanded){
+                    this.dispatchEvent(new CustomEvent('expand-'+node.data.type, {
+                      detail: { node: node },
+                      bubbles: true,
+                      composed: true }));
+                }
+            }
             }
           )  // end TreeExpanderButton
         );  // end Node
@@ -430,7 +446,9 @@ class MainLayout extends LitElement{
 
         if(this.myDiagram.model.nodeDataArray.length===0){
          //this.myDiagram.model=this.goGraph(go.TreeModel);
-         this.myDiagram.mode=this.goGraph(go.GraphLinksModel);
+         this.myDiagram.model=this.goGraph(go.GraphLinksModel,{
+          linkKeyProperty:"key"
+         });
        }
        this.myDiagram.startTransaction("fillWithSearchResults");
        if(type==='persona'){
@@ -547,7 +565,7 @@ class MainLayout extends LitElement{
    */
   _handlePersonDetails(rootNode){
     if(rootNode.data.expanded===false || rootNode.data.expanded===undefined){
-
+      this.myDiagram.model.removeNodeData(rootNode.data);
       fetch(BORME_PROXIED_AT+rootNode.data.resource_uri,
       {
         method:'GET',
@@ -575,7 +593,7 @@ class MainLayout extends LitElement{
               myModel.addNodeData(node);
             }
          });*/
-  
+
         this.nodeAdapter.transformPersonToNetwork(myJson,rootNode.data).then(
            nodeArray =>{
             nodeArray.forEach((node)=>{
@@ -589,16 +607,16 @@ class MainLayout extends LitElement{
            myModel.removeNodeData(rootNode.data);
            this.myDiagram.commitTransaction("Expand-"+rootNode.data.type);
            this.myDiagram.zoomToFit();
-  
+
           }
          );
 
          //myModel.addNodeDataCollection(this.nodeAdapter.transformPersonTo(myJson,rootNode.data));
-       
 
 
 
-       
+
+
           });/*.catch(function(error) {
             console.log('Hubo un problema con la petición Fetch:' + error.message);
           });;*/
