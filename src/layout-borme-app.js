@@ -47,15 +47,31 @@ class MainLayout extends LitElement{
     });
 
     this.addEventListener('addNodeToNetwork',(ev)=>{
-      this.myDiagram.startTransaction("1");
+      this.myDiagram.model.startTransaction("EventAddingNodes");
       console.log({event:'addNodeToNetwork',detail:ev.detail})
+      let nodesToAdd=[];
       if(ev.detail.node!==undefined){
-      this.myDiagram.model.addNodeData(ev.detail.node);
+        let rootNode=this.myDiagram.findNodeForKey(ev.detail.node.parent);
+        if(rootNode!==null && rootNode.data.expanded===false){
+          rootNode.data.expanded=true;
+        }
+        this.myDiagram.model.addNodeData(ev.detail.node);
       }
       if(ev.detail.nodes!==undefined){
-        this.myDiagram.model.addNodeDataCollection(ev.detail.nodes);
+        ev.detail.nodes.forEach(node=>{
+          let rootNode=this.myDiagram.findNodeForKey(node.parent);
+          if(rootNode!==null  && rootNode.data.expanded===false){
+            rootNode.data.expanded=true;
+          }
+          if(this.myDiagram.model.containsNodeData(node)){
+            this.myDiagram.model.removeNodeData(node);
+            
+          }
+          this.myDiagram.model.addNodeData(node);
+        });
         }
-        this.myDiagram.commitTransaction("1");
+        this.myDiagram.model.addNodeDataCollection(nodesToAdd);
+        this.myDiagram.model.commitTransaction("EventAddingNodes");
         this.myDiagram.zoomToFit();
     });
 

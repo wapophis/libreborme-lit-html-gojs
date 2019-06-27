@@ -93,6 +93,7 @@ export class GoJsNodeAdapter  {
      * @param {*} rootNodeData
      */
     transformCompanyTo(inputJson,rootNodeData){
+        console.log({transformCompanyTo:{inputJson:inputJson,root:rootNodeData,rootParent:rootNodeData.parent}});
         let oVal=[];
         let myCompanyDetails=new CompanyDetail(inputJson);
             oVal.push({
@@ -103,9 +104,9 @@ export class GoJsNodeAdapter  {
                 name:myCompanyDetails.name,
                 company:myCompanyDetails,
                 expanded:true,
-                parent:rootNodeData===null?"":(rootNodeData.parent!==""?rootNodeData.parent:"")
+                parent:rootNodeData===null?"":(rootNodeData.parent!==""?rootNodeData.key:"")
             });
-            console.log(myCompanyDetails);
+
 
             for(let i=0;i<myCompanyDetails.cargos_actuales_c.length;i++){
                 oVal.push({
@@ -154,7 +155,18 @@ export class GoJsNodeAdapter  {
                 });
             }
 
-            console.log(oVal);
+
+
+            for(let i=1;i<oVal.length;i++){
+                let node=oVal[i];
+                let distance=jarowinklerDistance(node.searchTerm.toUpperCase(),rootNodeData.name.toUpperCase());
+                if(distance===1 && rootNodeData.parent===""){ // Exact Match
+                    rootNodeData.parent=oVal[0].key;
+                    oVal[i]=rootNodeData;
+                }
+            }
+
+
         return oVal;
 
     }
@@ -237,7 +249,7 @@ export class GoJsNodeAdapter  {
                         if(node.accuracy>=0.75){
                                 await BormeClient.loadEmpresa("http://localhost",node.resource_uri).then(
                                     data=>{
-                                        console.log({data_in_promise:data,node:this.transformCompanyTo(data,rootNode)});
+                                      
                                         this.eventsTarget.dispatchEvent(new CustomEvent('addNodeToNetwork', {
                                             detail: { nodes: this.transformCompanyTo(data,rootNode) },
                                             bubbles: true,
