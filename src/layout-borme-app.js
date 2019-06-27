@@ -51,28 +51,48 @@ class MainLayout extends LitElement{
       console.log({event:'addNodeToNetwork',detail:ev.detail})
       let nodesToAdd=[];
       if(ev.detail.node!==undefined){
-        let rootNode=this.myDiagram.findNodeForKey(ev.detail.node.parent);
-        if(rootNode!==null && rootNode.data.expanded===false){
-          rootNode.data.expanded=true;
+        let checkNodeExists=this.myDiagram.findNodeForKey(ev.detail.node.key);
+      
+        if(checkNodeExists!==null){
+          this.myDiagram.model.commit(m=>m.removeNodeData(ev.detail.node));
         }
         this.myDiagram.model.addNodeData(ev.detail.node);
       }
+
       if(ev.detail.nodes!==undefined){
         ev.detail.nodes.forEach(node=>{
           let rootNode=this.myDiagram.findNodeForKey(node.parent);
           if(rootNode!==null  && rootNode.data.expanded===false){
             rootNode.data.expanded=true;
           }
-          if(this.myDiagram.model.containsNodeData(node)){
-            this.myDiagram.model.removeNodeData(node);
-            
-          }
+          console.log({AÑADIENDO_NODO:{node:node,rootNode:rootNode}});
+          let checkNodeExists=this.myDiagram.model.findNodeDataForKey(node.key);
+          if(checkNodeExists!==null){
+            console.log({NODE_EXISTS:{node:node,rootNode:rootNode}});
+          //  this.myDiagram.model.addLinkData({from:,to:,text});
+          //  this.myDiagram.model.removeNodeData(node);
+          }else{
           this.myDiagram.model.addNodeData(node);
+        }
+
         });
+
+
+        ev.detail.relations.forEach(rel=>{
+            console.log({rel:rel,exists:this.myDiagram.model.findLinkDataForKey(rel.key)});
+        });
+
+
+        this.myDiagram.model.addLinkDataCollection(ev.detail.relations);
         }
         this.myDiagram.model.addNodeDataCollection(nodesToAdd);
         this.myDiagram.model.commitTransaction("EventAddingNodes");
+        this.myDiagram.layout.invalidateLayout();
         this.myDiagram.zoomToFit();
+    });
+
+    this.addEventListener("LoadEmpresa",ev=>{
+      console.log({LoadEmpresa:{ev:ev}});
     });
 
     this.addEventListener('expand-person', (ev)=>{/*
@@ -358,6 +378,29 @@ class MainLayout extends LitElement{
         );  // end Node
 
 
+        this.myDiagram.linkTemplate =
+        this.goGraph(go.Link, {}, // the whole link panel
+          this.goGraph(go.Shape,  // the link shape
+            { stroke: "black",strokeWidth: 3 }),
+            this.goGraph(go.Shape,  // the arrowhead
+            { toArrow: "standard", stroke: null }),
+            this.goGraph(go.Panel, "Auto",
+            this.goGraph(go.Shape,  // the label background, which becomes transparent around the edges
+              {
+                fill: this.goGraph(go.Brush, "Radial", { 0: "rgb(240, 240, 240)", 0.3: "rgb(240, 240, 240)", 1: "rgba(240, 240, 240, 0)" }),
+                stroke: null
+              }),
+              this.goGraph(go.TextBlock,  // the label text
+              {
+                textAlign: "center",
+                font: "10pt helvetica, arial, sans-serif",
+                stroke: "#555555",
+                margin: 4
+              },
+              new go.Binding("text", "text"))
+          )
+        );
+
   }
 
 
@@ -386,7 +429,8 @@ class MainLayout extends LitElement{
            /// TEST MODEL
 
         if(this.myDiagram.model.nodeDataArray.length===0){
-         this.myDiagram.model=this.goGraph(go.TreeModel);
+         //this.myDiagram.model=this.goGraph(go.TreeModel);
+         this.myDiagram.mode=this.goGraph(go.GraphLinksModel);
        }
        this.myDiagram.startTransaction("fillWithSearchResults");
        if(type==='persona'){
@@ -531,11 +575,10 @@ class MainLayout extends LitElement{
               myModel.addNodeData(node);
             }
          });*/
-         console.log({query_for:myJson,rootNode:rootNode.data});
+  
         this.nodeAdapter.transformPersonToNetwork(myJson,rootNode.data).then(
            nodeArray =>{
             nodeArray.forEach((node)=>{
-              console.log({node:node});
              let myModel = this.myDiagram.model;
                if(myModel.findNodeDataForKey(node.key)===null){
                  myModel.addNodeData(node);
@@ -673,7 +716,7 @@ class MainLayout extends LitElement{
     class="light-input"></mwc-textfield>`}
     <mwc-icon-button icon="people" slot="actionItems" @click=${(ev)=>this.searchTypeActive="persona"}></mwc-icon-button>
     <mwc-icon-button icon="account_balance" slot="actionItems" @click=${(ev)=>this.searchTypeActive="empresa"}></mwc-icon-button>
-    <mwc-icon-button icon="clear" slot="actionItems" @click=${(ev)=>this.myDiagram.model.nodeDataArray=[]}></mwc-icon-button>
+    <mwc-icon-button icon="clear" slot="actionItems" @click=${(ev)=>{this.myDiagram.model.nodeDataArray=[];this.myDiagram.model.linkDataArray=[];}}></mwc-icon-button>
   </mwc-top-app-bar>`;
   }
 

@@ -71,8 +71,8 @@ export class GoJsNodeAdapter  {
                 resource_uri:searchResultSet.objects[i].resource_uri,
                 search_term:searchTerm,
                 expanded:false,
-                accuracy:Math.max(jarowinklerDistance(searchResultSet.objects[i].slug.split("-").join(""),searchTerm.split(" ").join("")),jarowinklerDistance(searchResultSet.objects[i].slug.split("-").reverse().join(""),searchTerm.split(" ").join(""))),
-                parent:rootNodeData===null?"":rootNodeData.key
+                accuracy:Math.max(jarowinklerDistance(searchResultSet.objects[i].slug.split("-").join(""),searchTerm.split(" ").join("")),jarowinklerDistance(searchResultSet.objects[i].slug.split("-").reverse().join(""),searchTerm.split(" ").join("")))
+                //parent:rootNodeData===null?"":rootNodeData.key
             })
         }
         return oVal;
@@ -95,6 +95,8 @@ export class GoJsNodeAdapter  {
     transformCompanyTo(inputJson,rootNodeData){
         console.log({transformCompanyTo:{inputJson:inputJson,root:rootNodeData,rootParent:rootNodeData.parent}});
         let oVal=[];
+        let rels=[];
+
         let myCompanyDetails=new CompanyDetail(inputJson);
             oVal.push({
                 type:NODE_TYPE_COMPANY,
@@ -103,9 +105,10 @@ export class GoJsNodeAdapter  {
                 resource_uri:myCompanyDetails.resource_uri,
                 name:myCompanyDetails.name,
                 company:myCompanyDetails,
-                expanded:true,
-                parent:rootNodeData===null?"":(rootNodeData.parent!==""?rootNodeData.key:"")
+                expanded:true
+                //parent:rootNodeData===null?"":(rootNodeData.parent!==""?rootNodeData.key:"")
             });
+        
 
 
             for(let i=0;i<myCompanyDetails.cargos_actuales_c.length;i++){
@@ -113,18 +116,21 @@ export class GoJsNodeAdapter  {
                     type:NODE_TYPE_COMPANY_TITLE,
                     key:myCompanyDetails.cargos_actuales_c[i].title+":"+myCompanyDetails.cargos_actuales_c[i].name,
                     title:myCompanyDetails.cargos_actuales_c[i].title,
-                    searchTerm:myCompanyDetails.cargos_actuales_c[i].name,
-                    parent:myCompanyDetails.slug
+                    searchTerm:myCompanyDetails.cargos_actuales_c[i].name
+                    //,parent:myCompanyDetails.slug
                 });
+
             }
+
 
             for(let i=0;i<myCompanyDetails.cargos_actuales_p.length;i++){
                 oVal.push({
                     type:NODE_TYPE_PERSON_TITLE,
-                    key:myCompanyDetails.cargos_actuales_p[i].title+":"+myCompanyDetails.cargos_actuales_p[i].name,
+                    //key:myCompanyDetails.cargos_actuales_p[i].title+":"+myCompanyDetails.cargos_actuales_p[i].name,
+                    key:myCompanyDetails.cargos_actuales_p[i].name.toLowerCase().split(" ").join("-"),
                     title:myCompanyDetails.cargos_actuales_p[i].title,
-                    searchTerm:myCompanyDetails.cargos_actuales_p[i].name,
-                    parent:myCompanyDetails.slug
+                    searchTerm:myCompanyDetails.cargos_actuales_p[i].name
+                    //,parent:myCompanyDetails.slug
                 });
             }
 
@@ -137,8 +143,8 @@ export class GoJsNodeAdapter  {
                     period:{date_from:myCompanyDetails.cargos_historial_c[i].date_from!==undefined?myCompanyDetails.cargos_historial_c[i].date_from:""
                     ,date_from:myCompanyDetails.cargos_historial_c[i].date_to!==undefined?myCompanyDetails.cargos_historial_c[i].date_to:""},
                     searchTerm:myCompanyDetails.cargos_historial_c[i].name,
-                    labelLink:"label",
-                    parent:myCompanyDetails.slug
+                    labelLink:"label"
+                    //,parent:myCompanyDetails.slug
                 });
             }
 
@@ -150,25 +156,30 @@ export class GoJsNodeAdapter  {
                     active:false,
                     period:{date_from:myCompanyDetails.cargos_historial_p[i].date_from!==undefined?myCompanyDetails.cargos_historial_p[i].date_from:""
                         ,date_from:myCompanyDetails.cargos_historial_p[i].date_to!==undefined?myCompanyDetails.cargos_historial_p[i].date_to:""},
-                    searchTerm:myCompanyDetails.cargos_historial_p[i].name,
-                    parent:myCompanyDetails.slug
+                    searchTerm:myCompanyDetails.cargos_historial_p[i].name
+                    //,parent:myCompanyDetails.slug
                 });
             }
 
 
 
+            // RELATIONS
+            let filteredOval=[];
+            filteredOval.push(oVal[0]);
             for(let i=1;i<oVal.length;i++){
                 let node=oVal[i];
                 let distance=jarowinklerDistance(node.searchTerm.toUpperCase(),rootNodeData.name.toUpperCase());
-                if(distance===1 && rootNodeData.parent===""){ // Exact Match
-                    rootNodeData.parent=oVal[0].key;
-                    oVal[i]=rootNodeData;
+                console.log("SUSTITUCION DE NODO PADRE "+distance+" "+node.searchTerm+" Vs "+rootNodeData.name);
+                if(distance===1){ // Exact Match
+                    rels.push({from:oVal[0].key,to:rootNodeData.key,text:oVal[i].title
+                        ,key:oVal[0].key+":"+node.key+":"+oVal[i].title.replace(".","")});
+                }else{
+                    rels.push({from:oVal[0].key,to:node.key,text:oVal[i].title
+                        ,key:oVal[0].key+":"+node.key+":"+oVal[i].title.replace(".","")});
+                    filteredOval.push(oVal[i]);
                 }
             }
-
-
-        return oVal;
-
+        return {nodes:filteredOval,relations:rels};
     }
 
     transformPersonsTo(inputArray,rootNodeData){
@@ -219,7 +230,7 @@ export class GoJsNodeAdapter  {
      * @param {*} rootNodeData
      */
     async transformPersonToNetwork(inputJson,rootNodeData){
-        console.log({transformPersonTo:inputJson,rootNodeData:rootNodeData});
+        console.log({transformPersonToNetwork:{input:inputJson,rootNodeData:rootNodeData}});
         let oVal=[];
         let relations=[];
 
@@ -231,8 +242,8 @@ export class GoJsNodeAdapter  {
             resource_uri:myPerson.resource_uri,
             name:myPerson.name,
             person:myPerson,
-            expanded:true,
-            parent:rootNodeData===null?"":(rootNodeData.parent!==""?rootNodeData.parent:"")
+            expanded:true
+            //parent:rootNodeData===null?"":(rootNodeData.parent!==""?rootNodeData.parent:"")
         };
          //   oVal.push(rootNode);
             this.eventsTarget.dispatchEvent(new CustomEvent('addNodeToNetwork', {
@@ -243,38 +254,34 @@ export class GoJsNodeAdapter  {
 
 
             for(let i=0;i<myPerson.cargos_actuales.length;i++){
-              await BormeClient.searchEmpresa("http://localhost",myPerson.cargos_actuales[i].name).then(sleeper(1000)).then(myJson=>{
+                
+              await BormeClient.searchEmpresa("http://localhost",myPerson.cargos_actuales[i].name).then(sleeper(Math.floor(Math.random() * 1000) + 1)).then(myJson=>{
                     let searchResults=this.transformCompaniesSearchResultsTo(myJson,rootNode,myPerson.cargos_actuales[i].name);
                     searchResults.forEach(async node=>{
+
                         if(node.accuracy>=0.75){
+                            this.eventsTarget.dispatchEvent(new CustomEvent('LoadEmpresa',{
+                            detail:{node:node},
+                            bubbles:true,
+                            composed:true
+                        }));
                                 await BormeClient.loadEmpresa("http://localhost",node.resource_uri).then(
                                     data=>{
-                                      
+                                        let companyMesh=this.transformCompanyTo(data,rootNode);
                                         this.eventsTarget.dispatchEvent(new CustomEvent('addNodeToNetwork', {
-                                            detail: { nodes: this.transformCompanyTo(data,rootNode) },
+                                            detail: { nodes: companyMesh.nodes,relations:companyMesh.relations},
                                             bubbles: true,
                                             composed: true }));
-                                       // Array.prototype.push.apply(oVal,this.transformCompanyTo(data,rootNode));
                                     }
                                 );
-                               // oVal.push(node);
-                        }else{
+
+                            }else{
                             console.log({NODO_DESCARTADO:node});
                         }
                     });
-                    //Array.prototype.push.apply(oVal,this.transformCompaniesSearchResultsTo(myJson,rootNode,myPerson.cargos_actuales[i].name));
                 });
-              /*  oVal.push({
-                    type:NODE_TYPE_COMPANIES_SEARCH_RESULT,
-                    key:myPerson.cargos_actuales[i].title+":"+myPerson.cargos_actuales[i].name,
-                    title:myPerson.cargos_actuales[i].title,
-                    parent:myPerson.slug,
-                    active:true,
-                    searchTerm:myPerson.cargos_actuales[i].name,
-                    parent:myPerson.slug
-                });*/
+
             }
-            console.log({transformPersonToNetwork:oVal});
         return oVal;
     }
 }
