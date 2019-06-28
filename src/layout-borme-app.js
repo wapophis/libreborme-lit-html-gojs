@@ -20,7 +20,7 @@ import {CypherProcessor} from './cypher-processor';
 import {go} from "gojs/release/go-module";
 import { BormeClient } from './borme-http-client';
 
-const BORME_PROXIED_AT="http://localhost:8080";
+const BORME_PROXIED_AT="http://localhost";
 
 
 class MainLayout extends LitElement{
@@ -62,29 +62,24 @@ class MainLayout extends LitElement{
 
       if(ev.detail.nodes!==undefined){
         ev.detail.nodes.forEach(node=>{
-          let rootNode=this.myDiagram.findNodeForKey(node.parent);
-          if(rootNode!==null  && rootNode.data.expanded===false){
-            rootNode.data.expanded=true;
-          }
-          console.log({AÑADIENDO_NODO:{node:node,rootNode:rootNode}});
+          
           let checkNodeExists=this.myDiagram.model.findNodeDataForKey(node.key);
           if(checkNodeExists!==null){
-            console.log({NODE_EXISTS:{node:node,rootNode:rootNode}});
-          //  this.myDiagram.model.addLinkData({from:,to:,text});
-          //  this.myDiagram.model.removeNodeData(node);
+            console.log({NODE_EXISTS:{node:node,existingNode:checkNodeExists}});
           }else{
           this.myDiagram.model.addNodeData(node);
-        }
+          }
 
         });
 
 
         ev.detail.relations.forEach(rel=>{
-            console.log({rel:rel,exists:this.myDiagram.findLinksByExample(rel).count});
+          if(this.myDiagram.model.findLinkDataForKey(rel.key)===null){
+            this.myDiagram.model.addLinkData(rel);
+          }
+          
         });
 
-
-        this.myDiagram.model.addLinkDataCollection(ev.detail.relations);
         }
         this.myDiagram.model.addNodeDataCollection(nodesToAdd);
         this.myDiagram.model.commitTransaction("EventAddingNodes");
@@ -192,6 +187,7 @@ class MainLayout extends LitElement{
             searchResults.forEach(snode=>{
                 if(snode.accuracy===1){ /// EXACT MATCH AUTO SEARCH
                   this._handlePersonDetails({data:snode});
+                  this.myDiagram.model.removeNodeData(ev.detail.node.data);
                 }else{
                   console.log({NODO_DESCARTADO:snode});
                 }
@@ -236,7 +232,7 @@ class MainLayout extends LitElement{
       initialContentAlignment: go.Spot.Center,
       "toolManager.hoverDelay": 100,
       layout: this.goGraph(go.ForceDirectedLayout,{ arrangesToOrigin:false,isInitial:true,isViewportSized:false
-        ,maxIterations: 20000, defaultSpringLength: 500, defaultElectricalCharge:1500,epsilonDistance:10 }),
+        ,maxIterations: 20000, defaultSpringLength: 500, defaultElectricalCharge:1500,epsilonDistance:0.5 }),
       // moving and copying nodes also moves and copies their subtrees
       "commandHandler.copiesTree": true,  // for the copy command
       "commandHandler.deletesTree": true, // for the delete command
@@ -270,8 +266,27 @@ class MainLayout extends LitElement{
             mouseHover:(e, obj)=> {  // OBJ is the Button
               var node = obj.part;  // get the Node containing this Button
               if (node === null) return;
+             
+              let lastNodeSel=null;
+              /// ELIMINAR EL STROKE ANCHO 
+              if(this.selectedNode!==undefined && this.selectedNode!==null){
+              lastNodeSel=this.myDiagram.findNodeForKey(this.selectedNode.key);
+              }
+              if(lastNodeSel!==undefined && lastNodeSel!==null){
+                lastNodeSel.findLinksConnected().each(link=>{
+                    link.path.strokeWidth="1";
+                });
+
+              }
               this.selectedNode=node.data;
               e.handled = true;
+             
+              
+              node.findLinksConnected().each(link=>{
+       
+                link.path.strokeWidth="5";
+              });
+
             }
           },
           // the node's outer shape, which will surround the text
@@ -397,7 +412,8 @@ class MainLayout extends LitElement{
         this.myDiagram.linkTemplate =
         this.goGraph(go.Link, {}, // the whole link panel
           this.goGraph(go.Shape,  // the link shape
-            { stroke: "black",strokeWidth: 3 }),
+            { stroke: "black",strokeWidth: 1 }),
+
             this.goGraph(go.Shape,  // the arrowhead
             { toArrow: "standard", stroke: null }),
             this.goGraph(go.Panel, "Auto",
@@ -427,6 +443,7 @@ class MainLayout extends LitElement{
     /*myHeaders.set('Content-Type', 'application/json');
     myHeaders.set('Access-Control-Allow-Origin','*');
     myHeaders.set('Access-Control-Allow-Methods','GET, POST, OPTIONS');*/
+    myHeaders.set('Origin',"localhost");
 
     fetch(BORME_PROXIED_AT+'/borme/api/v1/'+(type===null?this._getSearchType():type)+'/search/?q='+searchTerm+'&page=1',
     {
@@ -446,9 +463,12 @@ class MainLayout extends LitElement{
 
         if(this.myDiagram.model.nodeDataArray.length===0){
          //this.myDiagram.model=this.goGraph(go.TreeModel);
-         this.myDiagram.model=this.goGraph(go.GraphLinksModel,{
-          linkKeyProperty:"key"
-         });
+         var model=new go.GraphLinksModel();
+         model=this.goGraph(go.GraphLinksModel);
+         model.linkToKeyProperty="to";
+         model.linkFromKeyProperty="from";
+         model.linkKeyProperty="key";
+         this.myDiagram.model=model;
        }
        this.myDiagram.startTransaction("fillWithSearchResults");
        if(type==='persona'){
