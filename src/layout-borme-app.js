@@ -20,7 +20,7 @@ import {CypherProcessor} from './cypher-processor';
 import {go} from "gojs/release/go-module";
 import { BormeClient } from './borme-http-client';
 
-const BORME_PROXIED_AT="http://localhost";
+const BORME_PROXIED_AT="http://localhost:8080";
 
 
 class MainLayout extends LitElement{
@@ -62,7 +62,7 @@ class MainLayout extends LitElement{
 
       if(ev.detail.nodes!==undefined){
         ev.detail.nodes.forEach(node=>{
-          
+
           let checkNodeExists=this.myDiagram.model.findNodeDataForKey(node.key);
           if(checkNodeExists!==null){
             console.log({NODE_EXISTS:{node:node,existingNode:checkNodeExists}});
@@ -77,7 +77,7 @@ class MainLayout extends LitElement{
           if(this.myDiagram.model.findLinkDataForKey(rel.key)===null){
             this.myDiagram.model.addLinkData(rel);
           }
-          
+
         });
 
         }
@@ -266,9 +266,9 @@ class MainLayout extends LitElement{
             mouseHover:(e, obj)=> {  // OBJ is the Button
               var node = obj.part;  // get the Node containing this Button
               if (node === null) return;
-             
+
               let lastNodeSel=null;
-              /// ELIMINAR EL STROKE ANCHO 
+              /// ELIMINAR EL STROKE ANCHO
               if(this.selectedNode!==undefined && this.selectedNode!==null){
               lastNodeSel=this.myDiagram.findNodeForKey(this.selectedNode.key);
               }
@@ -280,10 +280,10 @@ class MainLayout extends LitElement{
               }
               this.selectedNode=node.data;
               e.handled = true;
-             
-              
+
+
               node.findLinksConnected().each(link=>{
-       
+
                 link.path.strokeWidth="5";
               });
 
@@ -538,16 +538,7 @@ class MainLayout extends LitElement{
 
   _handleCompanyDetails(rootNode){
     if(rootNode.data.expanded===false || rootNode.data.expanded===undefined){
-
-      fetch(BORME_PROXIED_AT+''+rootNode.data.resource_uri,
-      {
-        method:'GET',
-        mode: 'cors',
-        redirect:'follow'
-      })
-         .then(function(response) {
-          return response.json();
-         })
+      BormeClient.loadEmpresa(BORME_PROXIED_AT,rootNode.data.resource_uri)
          .then(myJson=>{
           this.myDiagram.startTransaction("CollapseExpandTree");
           console.log(myJson);
@@ -558,12 +549,11 @@ class MainLayout extends LitElement{
 
       // in the model data, each node is represented by a JavaScript object:
 
-         this.nodeAdapter.transformCompanyTo(myJson,rootNode.data).forEach((node)=>{
-          let myModel = this.myDiagram.model;
-          if(myModel.findNodeDataForKey(node.key)===null){
-            myModel.addNodeData(node);
-          }
-         });
+         let companyMesh=this.nodeAdapter.transformCompanyTo(myJson,{name:rootNode.data.search_term});
+          this.dispatchEvent(new CustomEvent('addNodeToNetwork', {
+              detail: { nodes: companyMesh.nodes,relations:companyMesh.relations},
+              bubbles: true,
+              composed: true }));
 
        //  myModel.addNodeDataCollection(this.nodeAdapter.transformCompanyTo(myJson,rootNode.data));
          rootNode.data.expanded=true;
