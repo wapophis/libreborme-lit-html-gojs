@@ -171,8 +171,23 @@ class MainLayout extends LitElement{
      */
     this.addEventListener('expand-empresa-title', (ev)=>{
       console.log({expand_empresa_title:ev.detail});
+      BormeClient.searchEmpresa(BORME_PROXIED_AT,ev.detail.node.data.searchTerm).then(data=>{
+        this.nodeAdapter.transformCompaniesSearchResultsTo(data,null,ev.detail.node.data.searchTerm).forEach(node=>{
+          if(node.accuracy>0.75){
+            BormeClient.loadEmpresa(BORME_PROXIED_AT,node.resource_uri).then(myJson=>{
+              let companyMesh=this.nodeAdapter.transformCompanyTo(myJson,{name:ev.detail.node.data.searchTerm});
+              ev.detail.node.data=companyMesh.nodes[0];
+              this.dispatchEvent(new CustomEvent('addNodeToNetwork', {
+                  detail: { nodes: companyMesh.nodes,relations:companyMesh.relations},
+                  bubbles: true,
+                  composed: true }));
 
-      this._handleSearch(ev.detail.node.data.searchTerm,"empresa",ev.detail.node.data);
+            });
+
+          }
+        });
+      });
+      //this._handleSearch(ev.detail.node.data.searchTerm,"empresa",ev.detail.node.data);
     });
 
         /**
