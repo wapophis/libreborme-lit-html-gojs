@@ -1,3 +1,10 @@
+/**
+ * Adaptador para la información devuelta por el libre borme.
+ */
+
+import {levenshteinDistance,damerauLevensteing, segmentedDistance, jarowinklerDistance} from './utils';
+
+
 export class PersonDetail{
     constructor(inputJson){
         this.cargos_actuales=inputJson.cargos_actuales;
@@ -30,20 +37,29 @@ export class CompanyDetail{
 
 export class SearchResult{
 
-    constructor(jsonInput,searchType){
+    constructor(jsonInput,searchType,searchTerm){
         this.name=jsonInput.name;
         this.resource_uri=jsonInput.resource_uri;
         this.slug=jsonInput.slug;
         this.searchType=searchType;
+        this.searchTerm=searchTerm;
+        try{
+        this.accuracy=Math.max(jarowinklerDistance(this.slug.split("-").join("").toUpperCase(),this.searchTerm.split(" ").join("").toUpperCase()),jarowinklerDistance(this.slug.split("-").reverse().join("").toUpperCase(),this.searchTerm.split(" ").join("").toUpperCase()));
+        }catch(e){
+            this.accuracy=0;
+        }
+
     }
 
 }
 
 
 export class SearchResultSet {
-    constructor(jsonInput,searchType){
+    constructor(jsonInput,searchType,searchTerm){
         this.searchType=searchType;
+        this.searchTerm=searchTerm;
         this.objects=jsonInput.objects;
+
     }
 
     get objects(){
@@ -57,8 +73,34 @@ export class SearchResultSet {
 
     set objects(inputArray){
         for(let i=0;i<inputArray.length;i++){
-            this.objects.push(new SearchResult(inputArray[i],this.searchType));
+            this.objects.push(new SearchResult(inputArray[i],this.searchType,this.searchTerm));
         }
     }
+    
+}
+
+
+export class Cargo{
+    constructor(jsonInput){
+        this.date_from=jsonInput.date_from;
+        this.title=jsonInput.title;
+        this.date_to=jsonInput.date_to;
+        this.name=jsonInput.name;
+    }
+
+    get isPasive(){
+        if(date_to!==undefined || date_to!==null){
+            let date=new Date(date_to);
+            return date.getTime<=new Date();
+        }
+        return false;
+    }
+}
+
+function _clone(object,dest){
+    
+    Object.getOwnPropertyNames(object).forEach(propName=>{
+        dest[propName]=object[propName];
+    });
     
 }

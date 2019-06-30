@@ -19,8 +19,9 @@ import {CypherProcessor} from './cypher-processor';
 
 import {go} from "gojs/release/go-module";
 import { BormeClient } from './borme-http-client';
+import { GraphNetwork } from './network-adapter';
 
-const BORME_PROXIED_AT="http://localhost:8080";
+const BORME_PROXIED_AT="http://localhost";
 
 
 class MainLayout extends LitElement{
@@ -34,7 +35,7 @@ class MainLayout extends LitElement{
     this.myDiagram=null;
     this.nodeAdapter=new GoJsNodeAdapter(this);
     this.selectedNode=null;
-
+    this.myNetworkMesh=new GraphNetwork();
     this.updateComplete.then(() => { this._renderDiagramContainer()});
 
   }
@@ -151,7 +152,10 @@ class MainLayout extends LitElement{
      */
     this.addEventListener('expand-empresa-search', (ev)=>{
       console.log({empresa_confirmada:ev.detail});
-      this._handleCompanyDetails(ev.detail.node);
+      //this._handleCompanyDetails(ev.detail.node);
+      BormeClient.loadEmpresaByUri(BORME_PROXIED_AT,ev.detail.node.data.resource_uri,true,0.75,item=>{
+        console.log(item);
+         });
     });
 
 
@@ -170,25 +174,17 @@ class MainLayout extends LitElement{
      * Búsqueda de empresas identificadas como relativas a otra empresa
      */
     this.addEventListener('expand-empresa-title', (ev)=>{
-      console.log({expand_empresa_title:ev.detail});
-      BormeClient.searchEmpresa(BORME_PROXIED_AT,ev.detail.node.data.searchTerm).then(data=>{
-        this.nodeAdapter.transformCompaniesSearchResultsTo(data,null,ev.detail.node.data.searchTerm).forEach(node=>{
-          if(node.accuracy>0.75){
-            BormeClient.loadEmpresa(BORME_PROXIED_AT,node.resource_uri).then(myJson=>{
-              let companyMesh=this.nodeAdapter.transformCompanyTo(myJson,{name:ev.detail.node.data.searchTerm});
-              ev.detail.node.data=companyMesh.nodes[0];
-              this.dispatchEvent(new CustomEvent('addNodeToNetwork', {
-                  detail: { nodes: companyMesh.nodes,relations:companyMesh.relations},
-                  bubbles: true,
-                  composed: true }));
-
-            });
-
-          }
-        });
+      BormeClient.loadEmpresaByName(BORME_PROXIED_AT,ev.detail.node.data.searchTerm,true,0.75,myJson=>{
+        let companyMesh=this.nodeAdapter.transformCompanyTo(myJson,{name:ev.detail.node.data.searchTerm});
+        ev.detail.node.data=companyMesh.nodes[0];
+        this.dispatchEvent(new CustomEvent('addNodeToNetwork', {
+            detail: { nodes: companyMesh.nodes,relations:companyMesh.relations},
+            bubbles: true,
+            composed: true }));
       });
-      //this._handleSearch(ev.detail.node.data.searchTerm,"empresa",ev.detail.node.data);
     });
+
+
 
         /**
      * Búsqueda de personas identificadas como relativas a otra empresa
@@ -552,6 +548,7 @@ class MainLayout extends LitElement{
   return oVal;}
 
   _handleCompanyDetails(rootNode){
+
     if(rootNode.data.expanded===false || rootNode.data.expanded===undefined){
       BormeClient.loadEmpresa(BORME_PROXIED_AT,rootNode.data.resource_uri)
          .then(myJson=>{
@@ -790,6 +787,7 @@ class MainLayout extends LitElement{
         <div slot="content" style="padding:4px;">
         ${this.render_selected_node_details()}
         </div>
+        <button @click=${(ev)=>{this._getNetworkMesh();}}>GetNetworkMesh</button>
         <button @click=${(ev)=>{console.log({tree:GojsModelManager.getFlatTree(this.myDiagram,this.selectedNode)})}}>Gen-Tree</button>
         <button @click=${(ev)=>{console.log({tree:CypherProcessor.cypherTree(GojsModelManager.getFlatTree(this.myDiagram,this.selectedNode)
           ,(rootNode,childNode)=>{
@@ -844,6 +842,11 @@ class MainLayout extends LitElement{
 
       </mwc-drawer>
   `;
+  }
+
+  _getNetworkMesh(){
+    let network=new go.ForceDirectedNetwork(this.myDiagram.layout);
+    console.log(network.vertexes);
   }
 
 

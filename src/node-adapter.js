@@ -289,7 +289,7 @@ export class GoJsNodeAdapter  {
 
             for(let i=0;i<myPerson.in_companies.length;i++){
 
-                await BormeClient.searchEmpresa("http://localhost:8080",myPerson.in_companies[i]).then(sleeper(Math.floor(Math.random() * 1000) + 1)).then(myJson=>{
+                await BormeClient.searchEmpresa("http://localhost",myPerson.in_companies[i]).then(sleeper(Math.floor(Math.random() * 1000) + 1)).then(myJson=>{
                       let searchResults=this.transformCompaniesSearchResultsTo(myJson,rootNode,myPerson.in_companies[i]);
                       searchResults.forEach(async node=>{
 
@@ -299,7 +299,7 @@ export class GoJsNodeAdapter  {
                               bubbles:true,
                               composed:true
                           }));
-                                  await BormeClient.loadEmpresa("http://localhost:8080",node.resource_uri).then(
+                                  await BormeClient.loadEmpresa("http://localhost",node.resource_uri).then(
                                       data=>{
                                           let companyMesh=this.transformCompanyTo(data,rootNode);
                                           this.eventsTarget.dispatchEvent(new CustomEvent('addNodeToNetwork', {
