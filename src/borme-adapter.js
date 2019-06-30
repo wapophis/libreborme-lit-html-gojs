@@ -8,13 +8,21 @@ import {levenshteinDistance,damerauLevensteing, segmentedDistance, jarowinklerDi
 export class PersonDetail{
     constructor(inputJson){
         this.cargos_actuales=inputJson.cargos_actuales;
+        this.cargos_historial=inputJson.cargos_historial;
         this.date_updated=inputJson.date_updated;
         this.in_bormes=inputJson.in_bormes;
         this.in_companies=inputJson.in_companies;
         this.name=inputJson.name;
         this.resource_uri=inputJson.resource_uri;
         this.slug=inputJson.slug;
+
+       for(let i=0;i<this.in_companies.length;i++){
+            this.in_companies[i]=this.in_companies[i].toUpperCase();
+       }
+        
     }
+
+   
 }
 
 export class CompanyDetail{
@@ -31,6 +39,7 @@ export class CompanyDetail{
         this.name=inputJson.name;
         this.slug=inputJson.slug;
         this.resource_uri=inputJson.resource_uri;
+        this.type=inputJson.type;
     }
     
 }
@@ -48,6 +57,8 @@ export class SearchResult{
         }catch(e){
             this.accuracy=0;
         }
+
+        console.log({SearchResult:this});
 
     }
 

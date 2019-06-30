@@ -1,4 +1,4 @@
-import { SearchResult,SearchResultSet, CompanyDetail, PersonDetail } from "./borme-adapter";
+import { SearchResult,SearchResultSet, CompanyDetail, PersonDetail, Cargo } from "./borme-adapter";
 import { NODE_TYPE_COMPANIES_SEARCH_RESULT } from "./node-adapter";
 
 
@@ -57,6 +57,46 @@ export class BormeClient{
     return data;
   }
 
+
+  static async loadPersonaByUri(baseUri,uri,autoexpand,accuracy,callback){
+    BormeClient.loadPersona(baseUri,uri).then(data=>{
+      let persona=new PersonDetail(data);
+      let myAccuracy=0;
+      if(accuracy!==undefined && accuracy!==null){
+        myAccuracy=accuracy;
+      }
+      if(autoexpand===true){
+        persona.cargos_actuales.forEach(element=>{
+          BormeClient.searchEmpresa(baseUri,element.name).then(data=>{
+            let searchResults=new SearchResultSet(data,"empresa",element.name);
+            searchResults.objects.forEach(result=>{
+              if(result.accuracy>=accuracy){
+                BormeClient.loadEmpresa(baseUri,result.resource_uri).then((data)=>{        
+                  callback(persona,new CompanyDetail(data),new Cargo(element));
+                  }
+                );
+              }
+            });
+          });
+        });
+
+        persona.cargos_historial.forEach(element=>{
+          BormeClient.searchEmpresa(baseUri,element.name).then(data=>{
+            let searchResults=new SearchResultSet(data,"empresa",element.name);
+            searchResults.objects.forEach(result=>{
+              if(result.accuracy>=accuracy){
+                BormeClient.loadEmpresa(baseUri,result.resource_uri).then((data)=>{        
+                  callback(persona,new CompanyDetail(data),new Cargo(element));
+                  }
+                );
+              }
+            });
+          });
+        });
+      }
+    });
+  }
+
   static async loadEmpresaByUri(baseUri,uri,autoexpand,accuracy,callback){
     BormeClient.loadEmpresa(baseUri,uri).then(data=>{
       let company=new CompanyDetail(data);
@@ -70,8 +110,8 @@ export class BormeClient{
               let searchResults=new SearchResultSet(data,"empresa",element.name);
               searchResults.objects.forEach(result=>{
                   if(result.accuracy>=accuracy){
-                    BormeClient.loadEmpresa(baseUri,result.resource_uri).then(data=>{
-                      callback(new CompanyDetail(data));
+                    BormeClient.loadEmpresa(baseUri,result.resource_uri).then((data)=>{
+                      callback(company,new CompanyDetail(data),new Cargo(element));
                     }
                     );
                   }
@@ -84,8 +124,8 @@ export class BormeClient{
             let searchResults=new SearchResultSet(data,"empresa",element.name);
             searchResults.objects.forEach(result=>{
                 if(result.accuracy>=accuracy){
-                  BormeClient.loadEmpresa(baseUri,result.resource_uri).then(data=>{
-                    callback(new CompanyDetail(data));
+                  BormeClient.loadEmpresa(baseUri,result.resource_uri).then((data)=>{
+                    callback(company,new CompanyDetail(data),new Cargo(element));
                   }
                   );
                 }
@@ -98,8 +138,8 @@ export class BormeClient{
           let searchResults=new SearchResultSet(data,"persona",element.name);
           searchResults.objects.forEach(result=>{
               if(result.accuracy>=accuracy){
-                BormeClient.loadPersona(baseUri,result.resource_uri).then(data=>{
-                  callback(new PersonDetail(data));
+                BormeClient.loadPersona(baseUri,result.resource_uri).then((data)=>{
+                  callback(company,new PersonDetail(data),new Cargo(element));
                 }
                 );
               }
@@ -112,8 +152,8 @@ export class BormeClient{
           let searchResults=new SearchResultSet(data,"persona",element.name);
           searchResults.objects.forEach(result=>{
               if(result.accuracy>=accuracy){
-                BormeClient.loadPersona(baseUri,result.resource_uri).then(data=>{
-                  callback(new PersonDetail(data));
+                BormeClient.loadPersona(baseUri,result.resource_uri).then((data)=>{
+                  callback(company,new PersonDetail(data),new Cargo(element));
                   }
                   );
                 }

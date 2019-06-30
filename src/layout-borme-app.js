@@ -19,7 +19,8 @@ import {CypherProcessor} from './cypher-processor';
 
 import {go} from "gojs/release/go-module";
 import { BormeClient } from './borme-http-client';
-import { GraphNetwork } from './network-adapter';
+import { BormeGraphNetwork } from './network-adapter';
+import { CompanyDetail, PersonDetail } from './borme-adapter';
 
 const BORME_PROXIED_AT="http://localhost";
 
@@ -35,7 +36,7 @@ class MainLayout extends LitElement{
     this.myDiagram=null;
     this.nodeAdapter=new GoJsNodeAdapter(this);
     this.selectedNode=null;
-    this.myNetworkMesh=new GraphNetwork();
+    this.myNetworkMesh=new BormeGraphNetwork();
     this.updateComplete.then(() => { this._renderDiagramContainer()});
 
   }
@@ -88,64 +89,84 @@ class MainLayout extends LitElement{
         this.myDiagram.zoomToFit();
     });
 
+
+    this.addEventListener("AddRelation",ev=>{
+      this.myDiagram.startTransaction("AddRelation");
+      let relation=ev.detail.relation;
+      
+      if(!this.myDiagram.findNodeForKey(relation.from.key)){
+        if(relation.from.properties instanceof CompanyDetail){
+          relation.from.type=NODE_TYPE_COMPANY;
+          
+        }
+        if(relation.from.properties instanceof PersonDetail){
+          relation.from.type=NODE_TYPE_PERSON;
+        }
+        relation.from.expanded=false;
+        this.myDiagram.model.addNodeData(relation.from)
+      }
+      if(!this.myDiagram.findNodeForKey(relation.to.key)){
+        if(relation.to.properties instanceof CompanyDetail){
+          relation.to.type=NODE_TYPE_COMPANY;
+        }
+        if(relation.to.properties instanceof PersonDetail){
+          relation.to.type=NODE_TYPE_PERSON;
+        }
+        relation.to.expanded=false;
+        this.myDiagram.model.addNodeData(relation.to)
+      }
+      
+
+      if(this.myDiagram.model.findLinkDataForKey(relation.key)===null){
+        this.myDiagram.model.addLinkData({
+          from:relation.from.key,
+          to:relation.to.key,
+          text:relation.label,
+          pasive:relation.properties.date_to!==undefined?true:false,
+          date_from:relation.properties.date_from,
+          date_to:relation.properties.date_to,
+          key:relation.key
+        });
+      }
+
+      
+      this.myDiagram.commitTransaction("AddRelation");
+      this.myDiagram.zoomToFit();
+
+    });
+
+
     this.addEventListener("LoadEmpresa",ev=>{
       console.log({LoadEmpresa:{ev:ev}});
     });
 
-    this.addEventListener('expand-person', (ev)=>{/*
-      fetch('http://localhost'+ev.detail.node.data.resource_uri,
-      {
-        method:'GET',
-        mode: 'cors',
-        redirect:'follow'
-      })
-         .then(function(response) {
-          return response.json();
-         })
-         .then(myJson=>{
-          this.myDiagram.startTransaction("CollapseExpandTree");
-          console.log(myJson);
-             /// TEST MODEL
-         let myModel = this.myDiagram.model;
-
-         let parent = ev.detail.node;
-         console.log({dataNode:ev.detail.node.data,parent:parent});
-
-
-      // in the model data, each node is represented by a JavaScript object:
-        // myModel.addNodeDataCollection(this._transformCompaniesToNode(myJson.in_companies,ev.detail.node.data.key));
-        myModel.addNodeDataCollection(this.nodeAdapter.transformPersonTo(myJson,ev.detail.node.data.key));
-        this.myDiagram.commitTransaction("CollapseExpandTree");
-          });/*.catch(function(error) {
-            console.log('Hubo un problema con la petición Fetch:' + error.message);
-          });;*/
-
-          this._handlePersonDetails(ev.detail.node);
-    }
-    );
-
-
-
-    this.addEventListener('expand-search',
-      (ev)=>{console.log({expandedempresa:ev})}
-   );
-
-
-    /**
+        /**
      * Búsqueda de empresas por expansion de hallazgo asociado a persona
      */
     this.addEventListener('expand-empresa', (ev)=>{
-      this._handleSearch(ev.detail.node.data.key.split("\n").join(" "),"empresa",ev.detail.node.data);
+      //this._handleSearch(ev.detail.node.data.key.split("\n").join(" "),"empresa",ev.detail.node.data);
+      BormeClient.loadEmpresaByUri(BORME_PROXIED_AT,ev.detail.node.data.properties.resource_uri,true,0.75,(company,item,cargo)=>{
+        //this.myNetworkMesh.addNodeData(item);
+        this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
+          relation:this.myNetworkMesh.addRelation(item,company,cargo)
+        }
+        }));
+       });      
     });
 
-     /**
-     * Búsqueda de empresas por expansion de hallazgo asociado a persona
-     */
-    this.addEventListener('expand-empresa-confirmada', (ev)=>{
-      console.log({empresa_confirmada:ev.detail});
-
-      this._handleCompanyDetails(ev.detail.node);
-    });
+    this.addEventListener('expand-person', (ev)=>{
+      BormeClient.loadPersonaByUri(BORME_PROXIED_AT,ev.detail.node.data.properties.resource_uri,true,0.75,(persona,empresa,cargo)=>{
+        if(persona.in_companies.includes(empresa.name+" "+empresa.type)){ 
+        this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
+          relation:this.myNetworkMesh.addRelation(persona,empresa,cargo)
+        }
+        }));
+        }else{
+          throw Error("Company not found");
+        }
+      });
+    }
+    );
 
      /**
      * Búsqueda de empresas por expansion de hallazgo asociado a persona
@@ -153,19 +174,30 @@ class MainLayout extends LitElement{
     this.addEventListener('expand-empresa-search', (ev)=>{
       console.log({empresa_confirmada:ev.detail});
       //this._handleCompanyDetails(ev.detail.node);
-      BormeClient.loadEmpresaByUri(BORME_PROXIED_AT,ev.detail.node.data.resource_uri,true,0.75,item=>{
-        console.log(item);
+      BormeClient.loadEmpresaByUri(BORME_PROXIED_AT,ev.detail.node.data.resource_uri,true,0.75,(company,item,cargo)=>{
+          //this.myNetworkMesh.addNodeData(item);
+          this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
+            relation:this.myNetworkMesh.addRelation(item,company,cargo)
+          }
+          }));
          });
+      this.myDiagram.model.removeNodeData(ev.detail.node.data);
     });
 
 
 
 
     this.addEventListener('expand-person-search', (ev)=>{
-      console.log({empresa_confirmada:ev.detail});
-      console.log({expand_person:CypherProcessor.cypherNode("v","Person",ev.detail.node.data)});
-      this._handlePersonDetails(ev.detail.node);
-
+         // this._handlePersonDetails(ev.detail.node);
+     BormeClient.loadPersonaByUri(BORME_PROXIED_AT,ev.detail.node.data.resource_uri,true,0.75,(persona,empresa,cargo)=>{
+      if(persona.in_companies.includes(empresa.name+" "+empresa.type)){ 
+      this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
+        relation:this.myNetworkMesh.addRelation(persona,empresa,cargo)
+      }
+      }));
+    }
+      this.myDiagram.model.removeNodeData(ev.detail.node.data);
+    });
     });
 
 
@@ -277,25 +309,33 @@ class MainLayout extends LitElement{
             mouseHover:(e, obj)=> {  // OBJ is the Button
               var node = obj.part;  // get the Node containing this Button
               if (node === null) return;
+              
+              
 
               let lastNodeSel=null;
               /// ELIMINAR EL STROKE ANCHO
               if(this.selectedNode!==undefined && this.selectedNode!==null){
               lastNodeSel=this.myDiagram.findNodeForKey(this.selectedNode.key);
               }
+
               if(lastNodeSel!==undefined && lastNodeSel!==null){
                 lastNodeSel.findLinksConnected().each(link=>{
-                    link.path.strokeWidth="1";
+                    link.path.strokeWidth="1";   
                 });
+                if(lastNodeSel.data.expanded){
+                  lastNodeSel.opacity="0.5";
+                }
 
               }
               this.selectedNode=node.data;
               e.handled = true;
 
 
-              node.findLinksConnected().each(link=>{
+              node.opacity="0.9";
 
+              node.findLinksConnected().each(link=>{
                 link.path.strokeWidth="5";
+                
               });
 
             }
@@ -354,10 +394,11 @@ class MainLayout extends LitElement{
               }),
 
               new go.Binding("opacity","",function(data,node){
-                if(data.active===undefined){
-                return data.accuracy!==undefined?data.accuracy:1;
+                
+                if(data.expanded===true){
+                  return 0.3;
                 }else{
-                 return data.active===false?0.5:1;
+                  return 0.9;
                 }
               }),
               new go.Binding("fill", "", function(data,node) {
@@ -366,7 +407,7 @@ class MainLayout extends LitElement{
                   oVal="#76d275";
                 }
                 if(data.type==="person"){
-                  oVal="#48a999";
+                  oVal="#c0ca33";
                 }
                 if(data.type==='person-title'){
                   oVal="#f5fd67";
@@ -405,7 +446,10 @@ class MainLayout extends LitElement{
               // customize the expander behavior to
               // create children if the node has never been expanded
               click: (e, obj)=> {  // OBJ is the Button
+                
                 var node = obj.part;  // get the Node containing this Button
+                
+                
                 if (node === null) return;
                 e.handled = true;
                 if(!node.data.expanded){
@@ -413,6 +457,8 @@ class MainLayout extends LitElement{
                       detail: { node: node },
                       bubbles: true,
                       composed: true }));
+                      node.data.expanded=true;
+                      node.opacity=0.5;
                 }
             }
             }
@@ -423,10 +469,19 @@ class MainLayout extends LitElement{
         this.myDiagram.linkTemplate =
         this.goGraph(go.Link, {}, // the whole link panel
           this.goGraph(go.Shape,  // the link shape
-            { stroke: "black",strokeWidth: 1 }),
+            { stroke: "black",strokeWidth: 1 }
+            ,
+              new go.Binding("strokeDashArray","",(data,link)=>{
+                  if(data.pasive===true){
+                    return [5,10];
+                  }
+                  return null;
+              })
+            ),
 
             this.goGraph(go.Shape,  // the arrowhead
-            { toArrow: "standard", stroke: null }),
+            { toArrow: "standard", stroke: null,scale:2 }),
+            
             this.goGraph(go.Panel, "Auto",
             this.goGraph(go.Shape,  // the label background, which becomes transparent around the edges
               {
@@ -440,7 +495,10 @@ class MainLayout extends LitElement{
                 stroke: "#555555",
                 margin: 4
               },
-              new go.Binding("text", "text"))
+              new go.Binding("text", "",(data,link)=>{
+                return data.text+"\n"+data.date_from+(data.pasive?"\n"+data.date_to:"");
+              })
+              )
           )
         );
 

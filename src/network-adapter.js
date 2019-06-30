@@ -1,4 +1,4 @@
-import { CompanyDetail, Cargo } from "./borme-adapter";
+import { CompanyDetail, Cargo, PersonDetail } from "./borme-adapter";
 
 export class GraphNetwork{
 
@@ -8,43 +8,26 @@ export class GraphNetwork{
     }
 
     addNodeData(input){
-        let node=new Node(input);
-        this.nodesMap.set(_buildNodeKey(input),input);
+        this.nodesMap.set(this._buildNodeKey(input),input);
+        return input;
+    }
+
+    nodeDataExists(data){
+        return this.nodesMap.has(this._buildNodeKey(data));
     }
 
     _buildNodeKey(input){
-        return input.variable+":"+input.key,input;
+        return (input.variable!==undefined?input.variable:"")+":"+input.label;
     }
 
+    _buildRelationKey(relation){
+        return relation.variable;
+    }
 
-
-
-    /**
-     * Devuelve una empresa con todas sus relaciones.
-     * @param {*} companyDetailData 
-     */
-    /*static processEmpresa(companyDetailData){
-        let myCompany=new CompanyDetail(companyDetailData);
-        let nodes=[];
-        let relations=[];
-        myCompany.cargos_actuales_c.forEach(cargo=>{
-            let mycargo=new Cargo(cargo);
-            nodes.push(new Node({variable:cargo.name.split("")
-                ,label:
-                ,properties:
-                ,key:
-            }))
-        });
-        myCompany.cargos_actuales_p.forEach(cargo=>{
-            let mycargo=new Cargo(cargo);
-        });
-        myCompany.cargos_historial_c.forEach(cargo=>{
-            let mycargo=new Cargo(cargo);
-        });
-        myCompany.cargos_historial_p.forEach(cargo=>{
-            let mycargo=new Cargo(cargo);
-        });
-    }*/
+    addRelation(relation){
+        this.relationMap.set(this._buildRelationKey(relation),relation);
+        return relation;
+    }
 }
 
 
@@ -73,12 +56,101 @@ export class Node{
         if(!Object.getOwnPropertyNames(object).includes('properties')){
             throw Error("Object input must have a properties field object");
         }
-        if(!Object.getOwnPropertyNames(object.properties).includes('key')){
-            throw Error("Object properties input must have a key field");
+        if(!Object.getOwnPropertyNames(object).includes('key')){
+            throw Error("Object input must have a key field");
         }
     }
 }
 
 export class Relation{
+    constructor(from,to,direction,label,properties){
+        this._validate(from,to,direction);
+        this.variable=from.variable+":"+direction+":"+to.variable;
+        this.key=from.key+":"+to.key;
+        this.direction=direction;
+        this.label=label;
+        this.properties=properties;
+        this.from=from;
+        this.to=to;
+    }
 
+
+    _validate(from,to,direction){
+        if(! from instanceof Node){
+            throw new Error("From object must be a node");
+        }
+        if(! to instanceof Node){
+            throw new Error("To object must be a node");
+        }
+
+        if(direction!=="->" && direction!=="<-" && direction!=="<-->")
+        {
+            throw new Error ("Uknown direction type")
+        }
+
+    }
+
+}
+
+
+
+/**
+ * Network adapter for borme entities
+ */
+export class BormeGraphNetwork extends GraphNetwork{
+    constructor(){
+        super();
+    }
+
+    addNodeData(input){
+        return super.addNodeData(this._parseToNode(input));        
+    }
+
+    _parseToNode(input){
+        let label;
+        if(input instanceof PersonDetail){
+            label="Person"
+        }
+
+        if(input instanceof CompanyDetail){
+            label="Company"
+        }
+
+        let node=new Node({
+            variable:input.slug.split("-").join(""),
+            label:label,
+            properties:input,
+            key:input.slug
+        });
+        return node;
+    }
+
+    addRelation(from,to,properties){
+        let fromNode=this._parseToNode(from);
+        let toNode=this._parseToNode(to);
+
+        if(!super.nodeDataExists(fromNode)){
+            super.addNodeData(fromNode);
+        }
+        if(!super.nodeDataExists(toNode)){
+            super.addNodeData(toNode);
+        }
+        
+        let rel=super.addRelation(this._parseRelation(fromNode,toNode,"->",properties.title,properties));
+        rel.key=this._buildRelationKey(rel);
+        return rel;
+
+    }
+
+    _parseRelation(from,to,direction,label,properties){
+        let fromData=from.properties;
+        let toData=to.properties;
+        return new Relation(from,to,direction,label,properties);
+    }
+
+    _buildRelationKey(relation){
+        return relation.variable+":"+relation.properties.title;
+    }
+
+    
 }
