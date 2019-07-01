@@ -169,6 +169,4 @@ export class CypherGraphNetwork extends GraphNetwork{
         super();
     }
 
-
-
 }

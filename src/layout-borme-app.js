@@ -49,47 +49,6 @@ class MainLayout extends LitElement{
        drawer.open = !drawer.open;
     });
 
-    this.addEventListener('addNodeToNetwork',(ev)=>{
-      this.myDiagram.model.startTransaction("EventAddingNodes");
-      console.log({event:'addNodeToNetwork',detail:ev.detail})
-      let nodesToAdd=[];
-      if(ev.detail.node!==undefined){
-        let checkNodeExists=this.myDiagram.findNodeForKey(ev.detail.node.key);
-
-        if(checkNodeExists!==null){
-          this.myDiagram.model.commit(m=>m.removeNodeData(ev.detail.node));
-        }
-        this.myDiagram.model.addNodeData(ev.detail.node);
-      }
-
-      if(ev.detail.nodes!==undefined){
-        ev.detail.nodes.forEach(node=>{
-
-          let checkNodeExists=this.myDiagram.model.findNodeDataForKey(node.key);
-          if(checkNodeExists!==null){
-            console.log({NODE_EXISTS:{node:node,existingNode:checkNodeExists}});
-          }else{
-          this.myDiagram.model.addNodeData(node);
-          }
-
-        });
-
-
-        ev.detail.relations.forEach(rel=>{
-          if(this.myDiagram.model.findLinkDataForKey(rel.key)===null){
-            this.myDiagram.model.addLinkData(rel);
-          }
-
-        });
-
-        }
-        this.myDiagram.model.addNodeDataCollection(nodesToAdd);
-        this.myDiagram.model.commitTransaction("EventAddingNodes");
-        this.myDiagram.layout.invalidateLayout();
-        this.myDiagram.zoomToFit();
-    });
-
-
     this.addEventListener("AddRelation",ev=>{
       this.myDiagram.startTransaction("AddRelation");
       let relation=ev.detail.relation;
@@ -135,12 +94,7 @@ class MainLayout extends LitElement{
 
     });
 
-
-    this.addEventListener("LoadEmpresa",ev=>{
-      console.log({LoadEmpresa:{ev:ev}});
-    });
-
-        /**
+    /**
      * Búsqueda de empresas por expansion de hallazgo asociado a persona
      */
     this.addEventListener('expand-empresa', (ev)=>{
@@ -154,6 +108,9 @@ class MainLayout extends LitElement{
        });      
     });
 
+    /**
+     * Expansión de un nodo tipo person
+     */
     this.addEventListener('expand-person', (ev)=>{
       BormeClient.loadPersonaByUri(BORME_PROXIED_AT,ev.detail.node.data.properties.resource_uri,true,0.75,(persona,empresa,cargo)=>{
         if(persona.in_companies.includes(empresa.name+" "+empresa.type)){ 
@@ -201,57 +158,16 @@ class MainLayout extends LitElement{
 
 
     this.addEventListener('expand-person-search', (ev)=>{
-         // this._handlePersonDetails(ev.detail.node);
+       
      BormeClient.loadPersonaByUri(BORME_PROXIED_AT,ev.detail.node.data.resource_uri,true,0.75,(persona,empresa,cargo)=>{
       if(persona.in_companies.includes(empresa.name+" "+empresa.type)){ 
-      this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
-        relation:this.myNetworkMesh.addRelation(persona,empresa,cargo)
-      }
-      }));
-    }
+          this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
+            relation:this.myNetworkMesh.addRelation(persona,empresa,cargo)
+          }
+          }));
+        }
       this.myDiagram.model.removeNodeData(ev.detail.node.data);
-    });
-    });
-
-
-
-    /**
-     * Búsqueda de empresas identificadas como relativas a otra empresa
-     */
-    this.addEventListener('expand-empresa-title', (ev)=>{
-      BormeClient.loadEmpresaByName(BORME_PROXIED_AT,ev.detail.node.data.searchTerm,true,0.75,myJson=>{
-        let companyMesh=this.nodeAdapter.transformCompanyTo(myJson,{name:ev.detail.node.data.searchTerm});
-        ev.detail.node.data=companyMesh.nodes[0];
-        this.dispatchEvent(new CustomEvent('addNodeToNetwork', {
-            detail: { nodes: companyMesh.nodes,relations:companyMesh.relations},
-            bubbles: true,
-            composed: true }));
       });
-    });
-
-
-
-        /**
-     * Búsqueda de personas identificadas como relativas a otra empresa
-     */
-    this.addEventListener('expand-person-title', (ev)=>{
-      console.log({empresa_confirmada_title:ev.detail});
-      //this._handleSearch(ev.detail.node.data.searchTerm,"persona",ev.detail.node.data);
-      if(!ev.detail.node.data.expanded){
-          BormeClient.searchPersona(BORME_PROXIED_AT,ev.detail.node.data.searchTerm).then(data=>{
-            let searchResults=this.nodeAdapter.transformPersonSearchResultsTo(data,ev.detail.node.data,ev.detail.node.data.searchTerm);
-            searchResults.forEach(snode=>{
-                if(snode.accuracy===1){ /// EXACT MATCH AUTO SEARCH
-                  this._handlePersonDetails({data:snode});
-                  this.myDiagram.model.removeNodeData(ev.detail.node.data);
-                }else{
-                  console.log({NODO_DESCARTADO:snode});
-                }
-            });
-
-          });
-          ev.detail.node.data.expanded=true;
-    }
     });
   }
 
@@ -280,6 +196,9 @@ class MainLayout extends LitElement{
     };
   }
 
+  /**
+   * Renderizado del contenedor del diagrama. TODO: SACAR Y REFACTORIZAR EN UN LIT APARTE
+   */
   _renderDiagramContainer(){
 
     console.log("Rendering diagram container....");
@@ -519,6 +438,10 @@ class MainLayout extends LitElement{
 
 
 
+  /**
+   * Method to search into borme api. 
+   * TODO: Refactor this to use borme-http-client.
+   */
   _handleSearch(searchTerm,type,rootNode,replaceParent){
     console.log({handleSearch:{rootNode:rootNode}});
     var myHeaders = new Headers();
@@ -571,187 +494,9 @@ class MainLayout extends LitElement{
         });;*/
   }
 
-  _transformSearchPersonsToNode(persons,rootNode){
-    //let oVal=[{key:rootNode,type:'search'}];
-    let oVal=[];
-    for(let i=0;i<persons.length;i++){
-      oVal.push({
-        type:'person',
-        resource_uri:persons[i].resource_uri,
-        slug:persons[i].slug,
-        key:persons[i].name.split(" ").join("\n"),
-        parent:rootNode.type==="search"?"":rootNode.key
-      });
-    }
-
-  return oVal;}
-
-
-  _transformSearchEmpresaToNode(companies,rootNode){
-    //let oVal=[{key:rootNode,type:'search'}];
-    let oVal=[];
-    for(let i=0;i<companies.length;i++){
-      oVal.push({
-        type:'empresa-confirmada',
-        resource_uri:companies[i].resource_uri,
-        slug:companies[i].slug,
-        key:companies[i].name.split(" ").join("\n"),
-        parent:rootNode.type==="search"?"":rootNode.key
-      });
-    }
-
-  return oVal;}
-
-
-
-  _transformCompaniesToNode(companies,rootNode){
-    let oVal=[];
-    for(let i=0;i<companies.length;i++){
-      oVal.push({
-        type:'empresa',
-        resource_uri:BORME_PROXIED_AT+'/borme/api/v1/'+'empresa'+'/search/?q='+companies[i]+'&page=1',
-        slug:companies[i].split(" ").join("-"),
-        key:companies[i].split(" ").join("\n"),
-        parent:rootNode
-      });
-    }
-
-  return oVal;}
-
-  _handleCompanyDetails(rootNode){
-
-    if(rootNode.data.expanded===false || rootNode.data.expanded===undefined){
-      BormeClient.loadEmpresa(BORME_PROXIED_AT,rootNode.data.resource_uri)
-         .then(myJson=>{
-          this.myDiagram.startTransaction("CollapseExpandTree");
-          console.log(myJson);
-             /// TEST MODEL
-         let myModel = this.myDiagram.model;
-         console.log({dataNode:rootNode.data,parent:rootNode});
-
-
-      // in the model data, each node is represented by a JavaScript object:
-
-         let companyMesh=this.nodeAdapter.transformCompanyTo(myJson,{name:rootNode.data.search_term});
-          this.dispatchEvent(new CustomEvent('addNodeToNetwork', {
-              detail: { nodes: companyMesh.nodes,relations:companyMesh.relations},
-              bubbles: true,
-              composed: true }));
-
-       //  myModel.addNodeDataCollection(this.nodeAdapter.transformCompanyTo(myJson,rootNode.data));
-         rootNode.data.expanded=true;
-         myModel.removeNodeData(rootNode.data);
-
-
-        this.myDiagram.commitTransaction("CollapseExpandTree");
-        this.myDiagram.zoomToFit();
-          });/*.catch(function(error) {
-            console.log('Hubo un problema con la petición Fetch:' + error.message);
-          });;*/
-        }
-
-  }
-
   /**
-   * Fetch details for person data node type
-   * @param {*} rootNode
+   * Method to return the search type active on main ui.
    */
-  _handlePersonDetails(rootNode){
-    if(rootNode.data.expanded===false || rootNode.data.expanded===undefined){
-      this.myDiagram.model.removeNodeData(rootNode.data);
-      fetch(BORME_PROXIED_AT+rootNode.data.resource_uri,
-      {
-        method:'GET',
-        mode: 'cors',
-        redirect:'follow'
-      })
-         .then(function(response) {
-          return response.json();
-         })
-         .then(myJson=>{
-          this.myDiagram.startTransaction("Expand-"+rootNode.data.type);
-             /// TEST MODEL
-         let myModel = this.myDiagram.model;
-
-
-
-      // in the model data, each node is represented by a JavaScript object:
-         //myModel.removeNodeData(rootNode.data);
-
-         // V.0
-        /* this.nodeAdapter.transformPersonToNetwork(myJson,rootNode.data).forEach((node)=>{
-           console.log({node:node});
-          let myModel = this.myDiagram.model;
-            if(myModel.findNodeDataForKey(node.key)===null){
-              myModel.addNodeData(node);
-            }
-         });*/
-
-        this.nodeAdapter.transformPersonToNetwork(myJson,rootNode.data).then(
-           nodeArray =>{
-            nodeArray.forEach((node)=>{
-             let myModel = this.myDiagram.model;
-               if(myModel.findNodeDataForKey(node.key)===null){
-                 myModel.addNodeData(node);
-               }
-           });
-
-           rootNode.data.expanded=true;
-           myModel.removeNodeData(rootNode.data);
-           this.myDiagram.commitTransaction("Expand-"+rootNode.data.type);
-           this.myDiagram.zoomToFit();
-
-          }
-         );
-
-         //myModel.addNodeDataCollection(this.nodeAdapter.transformPersonTo(myJson,rootNode.data));
-
-
-
-
-
-          });/*.catch(function(error) {
-            console.log('Hubo un problema con la petición Fetch:' + error.message);
-          });;*/
-        }
-
-  }
-
-
-
-
-
-  _transformCargosToNode(empresa,rootNodeData){
-    let oVal=[];
-
-    // Cargos de empresa personas
-    if(empresa.cargos_actuales_p.length>0){
-      for(let i=0;i<empresa.cargos_actuales_p.length;i++){
-        oVal.push({
-          type:'person-title',
-          key:(empresa.cargos_actuales_p[i].name.split(" ").join("\n")),
-          title:empresa.cargos_actuales_p[i].title,
-          defaultElectricalCharge:300,
-          parent:rootNodeData===null?"":rootNodeData.key
-        })
-      }
-    }
-    // Cargos de empresa empresas
-    if(empresa.cargos_actuales_c.length>0){
-      for(let i=0;i<empresa.cargos_actuales_c.length;i++){
-        oVal.push({
-          type:'empresa-title',
-          key:(empresa.cargos_actuales_c[i].name.split(" ").join("\n")),
-          title:empresa.cargos_actuales_c[i].title,
-
-          parent:rootNodeData===null?"":rootNodeData.key
-        })
-      }
-    }
-
-    return oVal;
-  }
-
   _getSearchType(){
     this.requestUpdate();
 
@@ -764,6 +509,9 @@ class MainLayout extends LitElement{
 
   }
 
+  /**
+   * Method to control enter key into textbox, to launch the search
+   */
   _handleSearchBoxKeys(key,target,type){
     if(key==="Enter"){
         this._handleSearch(target.value,type,null);
@@ -772,6 +520,9 @@ class MainLayout extends LitElement{
 
 
 
+  /**
+   * Renderizado de la tarjeta con los detalles del nodo.
+   */
   render_selected_node_details(){
     let oVal=[];
     if(this.selectedNode!==null){

@@ -5,6 +5,9 @@
 import {levenshteinDistance,damerauLevensteing, segmentedDistance, jarowinklerDistance} from './utils';
 
 
+/**
+ * Detalle de una persona
+ */
 export class PersonDetail{
     constructor(inputJson){
         this.cargos_actuales=inputJson.cargos_actuales;
@@ -25,6 +28,9 @@ export class PersonDetail{
    
 }
 
+/**
+ * Detalle de una compañia
+ */
 export class CompanyDetail{
     constructor(inputJson){
         this.cargos_actuales_c=inputJson.cargos_actuales_c;
@@ -54,6 +60,9 @@ export class CompanyDetail{
     
 }
 
+/**
+ * Detalle de un resultado de búsqueda
+ */
 export class SearchResult{
 
     constructor(jsonInput,searchType,searchTerm){
@@ -75,6 +84,9 @@ export class SearchResult{
 }
 
 
+/**
+ * Detalle de un resultset de búsqueda
+ */
 export class SearchResultSet {
     constructor(jsonInput,searchType,searchTerm){
         this.searchType=searchType;
@@ -101,6 +113,9 @@ export class SearchResultSet {
 }
 
 
+/**
+ * Detalle de un cargo
+ */
 export class Cargo{
     constructor(jsonInput){
         this.date_from=jsonInput.date_from;
