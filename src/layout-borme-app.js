@@ -19,10 +19,10 @@ import {CypherProcessor} from './cypher-processor';
 
 import {go} from "gojs/release/go-module";
 import { BormeClient } from './borme-http-client';
-import { BormeGraphNetwork } from './network-adapter';
+import { BormeGraphNetwork, CypherGraphNetwork } from './network-adapter';
 import { CompanyDetail, PersonDetail } from './borme-adapter';
 
-const BORME_PROXIED_AT="http://localhost";
+const BORME_PROXIED_AT="http://localhost:8080";
 
 
 class MainLayout extends LitElement{
@@ -52,11 +52,11 @@ class MainLayout extends LitElement{
     this.addEventListener("AddRelation",ev=>{
       this.myDiagram.startTransaction("AddRelation");
       let relation=ev.detail.relation;
-      
+
       if(!this.myDiagram.findNodeForKey(relation.from.key)){
         if(relation.from.properties instanceof CompanyDetail){
           relation.from.type=NODE_TYPE_COMPANY;
-          
+
         }
         if(relation.from.properties instanceof PersonDetail){
           relation.from.type=NODE_TYPE_PERSON;
@@ -74,7 +74,7 @@ class MainLayout extends LitElement{
         relation.to.expanded=false;
         this.myDiagram.model.addNodeData(relation.to)
       }
-      
+
 
       if(this.myDiagram.model.findLinkDataForKey(relation.key)===null){
         this.myDiagram.model.addLinkData({
@@ -88,7 +88,7 @@ class MainLayout extends LitElement{
         });
       }
 
-      
+
       this.myDiagram.commitTransaction("AddRelation");
       this.myDiagram.zoomToFit();
 
@@ -105,7 +105,7 @@ class MainLayout extends LitElement{
           relation:this.myNetworkMesh.addRelation(item,company,cargo)
         }
         }));
-       });      
+       });
     });
 
     /**
@@ -113,7 +113,7 @@ class MainLayout extends LitElement{
      */
     this.addEventListener('expand-person', (ev)=>{
       BormeClient.loadPersonaByUri(BORME_PROXIED_AT,ev.detail.node.data.properties.resource_uri,true,0.75,(persona,empresa,cargo)=>{
-        if(persona.in_companies.includes(empresa.name+" "+empresa.type)){ 
+        if(persona.in_companies.includes(empresa.name+" "+empresa.type)){
         this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
           relation:this.myNetworkMesh.addRelation(persona,empresa,cargo)
         }
@@ -138,7 +138,7 @@ class MainLayout extends LitElement{
               this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
                 relation:this.myNetworkMesh.addRelation(item,company,cargo)
               }
-            }));              
+            }));
             }
           }
           if(item instanceof CompanyDetail){
@@ -149,7 +149,7 @@ class MainLayout extends LitElement{
               }));
             }
           }
-          
+
          });
       this.myDiagram.model.removeNodeData(ev.detail.node.data);
     });
@@ -158,9 +158,9 @@ class MainLayout extends LitElement{
 
 
     this.addEventListener('expand-person-search', (ev)=>{
-       
+
      BormeClient.loadPersonaByUri(BORME_PROXIED_AT,ev.detail.node.data.resource_uri,true,0.75,(persona,empresa,cargo)=>{
-      if(persona.in_companies.includes(empresa.name+" "+empresa.type)){ 
+      if(persona.in_companies.includes(empresa.name+" "+empresa.type)){
           this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
             relation:this.myNetworkMesh.addRelation(persona,empresa,cargo)
           }
@@ -241,8 +241,8 @@ class MainLayout extends LitElement{
             mouseHover:(e, obj)=> {  // OBJ is the Button
               var node = obj.part;  // get the Node containing this Button
               if (node === null) return;
-              
-              
+
+
 
               let lastNodeSel=null;
               /// ELIMINAR EL STROKE ANCHO
@@ -252,7 +252,7 @@ class MainLayout extends LitElement{
 
               if(lastNodeSel!==undefined && lastNodeSel!==null){
                 lastNodeSel.findLinksConnected().each(link=>{
-                    link.path.strokeWidth="1";   
+                    link.path.strokeWidth="1";
                 });
                 if(lastNodeSel.data.expanded){
                   lastNodeSel.opacity="0.5";
@@ -267,7 +267,7 @@ class MainLayout extends LitElement{
 
               node.findLinksConnected().each(link=>{
                 link.path.strokeWidth="5";
-                
+
               });
 
             }
@@ -326,7 +326,7 @@ class MainLayout extends LitElement{
               }),
 
               new go.Binding("opacity","",function(data,node){
-                
+
                 if(data.expanded===true){
                   return 0.3;
                 }else{
@@ -360,10 +360,10 @@ class MainLayout extends LitElement{
               })
               ),
               this.goGraph(go.TextBlock,
-              { font: '12pt sans-serif', margin: 5 },
+              { font: '24pt Roboto,sans-serif', margin: 5 },
 
               new go.Binding("text", "",function(data,node){
-                return ((data.title===undefined?"":data.title)+"\n\n"+data.key+"\n\n"+data.type.split("-").join("\n")).toLocaleUpperCase();
+                return ((data.title===undefined?"":data.title)+"\n\n"+data.key.split("-").join("\n")+"\n\n").toUpperCase();
               })
 
               )
@@ -378,10 +378,10 @@ class MainLayout extends LitElement{
               // customize the expander behavior to
               // create children if the node has never been expanded
               click: (e, obj)=> {  // OBJ is the Button
-                
+
                 var node = obj.part;  // get the Node containing this Button
-                
-                
+
+
                 if (node === null) return;
                 e.handled = true;
                 if(!node.data.expanded){
@@ -413,7 +413,7 @@ class MainLayout extends LitElement{
 
             this.goGraph(go.Shape,  // the arrowhead
             { toArrow: "standard", stroke: null,scale:2 }),
-            
+
             this.goGraph(go.Panel, "Auto",
             this.goGraph(go.Shape,  // the label background, which becomes transparent around the edges
               {
@@ -439,7 +439,7 @@ class MainLayout extends LitElement{
 
 
   /**
-   * Method to search into borme api. 
+   * Method to search into borme api.
    * TODO: Refactor this to use borme-http-client.
    */
   _handleSearch(searchTerm,type,rootNode,replaceParent){
@@ -667,8 +667,9 @@ class MainLayout extends LitElement{
   }
 
   _getNetworkMesh(){
-    let network=new go.ForceDirectedNetwork(this.myDiagram.layout);
-    console.log(network.vertexes);
+    let cypherNet=new CypherGraphNetwork(this.myNetworkMesh.relationMap,this.myNetworkMesh.nodesMap);
+    console.log(cypherNet.processNetwork().join(","));
+
   }
 
 

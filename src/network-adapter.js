@@ -1,4 +1,5 @@
 import { CompanyDetail, Cargo, PersonDetail } from "./borme-adapter";
+import {CypherProcessor} from "./cypher-processor";
 
 /**
  * Representación de una red basada en grafo
@@ -109,7 +110,7 @@ export class BormeGraphNetwork extends GraphNetwork{
     }
 
     addNodeData(input){
-        return super.addNodeData(this._parseToNode(input));        
+        return super.addNodeData(this._parseToNode(input));
     }
 
     _parseToNode(input){
@@ -141,7 +142,7 @@ export class BormeGraphNetwork extends GraphNetwork{
         if(!super.nodeDataExists(toNode)){
             super.addNodeData(toNode);
         }
-        
+
         let rel=super.addRelation(this._parseRelation(fromNode,toNode,"->",properties.title,properties));
         rel.key=this._buildRelationKey(rel);
         return rel;
@@ -157,7 +158,7 @@ export class BormeGraphNetwork extends GraphNetwork{
     _buildRelationKey(relation){
         return relation.variable+":"+relation.properties.title;
     }
-    
+
 }
 
 
@@ -165,8 +166,46 @@ export class BormeGraphNetwork extends GraphNetwork{
  * Representación de un grafo para cypher.
  */
 export class CypherGraphNetwork extends GraphNetwork{
-    constructor(){
+    constructor(relationMap,nodesMap){
         super();
+        this.cypherQuery=[];
+        this.nodesMap=nodesMap;
+        this.relationMap=relationMap;
+
+    }
+
+    addNodeData(node){
+     //   this.cypherQuery.push(",");
+        this.cypherQuery.push(CypherProcessor.cypherNode(node.variable,node.label,{
+            name:node.properties.name,
+            id:node.variable,
+            date_updated:node.properties.date_updated
+            }
+            ));
+    }
+
+    addRelationData(relation){
+      //  this.cypherQuery.push(",");
+        let fromNode=this.nodesMap.get(super._buildNodeKey(relation.from));
+        let toNode=this.nodesMap.get(super._buildNodeKey(relation.to));
+
+        let fromNodeC=CypherProcessor.cypherNode(fromNode.variable);
+        let toNodeC=CypherProcessor.cypherNode(toNode.variable);
+        let rel=CypherProcessor.cypherRelation(null,relation.label.replace(" ","").replace(new RegExp("\\.","g"),"_"),relation.properties,relation.direction);
+
+        this.cypherQuery.push(`${fromNodeC}${rel}${toNodeC}`);
+    }
+
+
+    processNetwork(){
+        this.cypherQuery=[];
+        this.nodesMap.forEach(node=>{
+            this.addNodeData(node);
+        });
+        this.relationMap.forEach(relation=>{
+            this.addRelationData(relation);
+        });
+        return this.cypherQuery;
     }
 
 }

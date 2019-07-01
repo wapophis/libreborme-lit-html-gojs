@@ -39,7 +39,7 @@ export class CypherProcessor{
 
     /**
      * Cypher a tree expressed as a node array with parent-child relationships.
-     * @param {*} nodeArray 
+     * @param {*} nodeArray
      * @param {Function} relationshipParseFunction Function to parse relations, must return an object in cypher format like {var:variable,label:label,props:properties,direction:->|<-|-><-}
      * @param {String} processedPropertyKey String with the property key wich control if node has been cyphered.
      */
@@ -78,7 +78,7 @@ export class CypherProcessor{
     return oVal;
     }
 
- 
+
 
     static _lookForChildrens(nodeArray,propParentKey,parentValue){
         let oVal=[];
@@ -108,16 +108,20 @@ class Cnode{
                throw Error("Cannot parse without variable");
            }
         return `(${variable}{${templateLiteralParser(properties)}})`;
+
         }
 
         if(variable===undefined || variable===null){
             return `(${label}{${templateLiteralParser(properties)}})`;
+
         }
         return `(${variable}:${label}{${templateLiteralParser(properties)}})`;
+
     }
 
    static simpleCypher(label,properties){
     return `(${label}{${templateLiteralParser(properties)}})`;
+
    }
 }
 
@@ -164,8 +168,21 @@ class Rel{
 
 function templateLiteralParser(object){
     let oVal=``;
+    if(object!=null){
     Object.getOwnPropertyNames(object).forEach((propName)=>{
+     /*   console.log(propName);*/
+        if((typeof object[propName]==='object')){
+        /*    let oArray=[];
+            object[propName].forEach(item=>{
+                oArray.push(templateLiteralParser(item));
+            });
+            oVal+=`${propName}:[${oArray}]`;*/
+            //let inner=templateLiteralParser(object[propName]);
+            //oVal+=`{${propName}:'${inner}'}`;
+        }else{
         oVal+=`${propName}:'${object[propName]}',`;
+        }
     });
+    }
     return oVal.slice(0,oVal.length-1);
 }

@@ -1,6 +1,6 @@
 import { SearchResult,SearchResultSet, CompanyDetail, PersonDetail, Cargo } from "./borme-adapter";
 import { NODE_TYPE_COMPANIES_SEARCH_RESULT } from "./node-adapter";
-
+import {sleeper} from "./utils";
 
 export class BormeClient{
 
@@ -67,11 +67,11 @@ export class BormeClient{
       }
       if(autoexpand===true){
         persona.cargos_actuales.forEach(element=>{
-          BormeClient.searchEmpresa(baseUri,element.name).then(data=>{
+          BormeClient.searchEmpresa(baseUri,element.name).then(sleeper(Math.floor((Math.random() * 1001)))).then(data=>{
             let searchResults=new SearchResultSet(data,"empresa",element.name);
             searchResults.objects.forEach(result=>{
               if(result.accuracy>=accuracy){
-                BormeClient.loadEmpresa(baseUri,result.resource_uri).then((data)=>{        
+                BormeClient.loadEmpresa(baseUri,result.resource_uri).then((data)=>{
                   callback(persona,new CompanyDetail(data),new Cargo(element));
                   }
                 );
@@ -81,11 +81,11 @@ export class BormeClient{
         });
 
         persona.cargos_historial.forEach(element=>{
-          BormeClient.searchEmpresa(baseUri,element.name).then(data=>{
+          BormeClient.searchEmpresa(baseUri,element.name).then(sleeper(Math.floor((Math.random() * 1001)))).then(data=>{
             let searchResults=new SearchResultSet(data,"empresa",element.name);
             searchResults.objects.forEach(result=>{
               if(result.accuracy>=accuracy){
-                BormeClient.loadEmpresa(baseUri,result.resource_uri).then((data)=>{        
+                BormeClient.loadEmpresa(baseUri,result.resource_uri).then((data)=>{
                   callback(persona,new CompanyDetail(data),new Cargo(element));
                   }
                 );
@@ -106,7 +106,7 @@ export class BormeClient{
       }
       if(autoexpand===true){
         company.cargos_actuales_c.forEach(element => {
-            BormeClient.searchEmpresa(baseUri,element.name).then(data=>{
+            BormeClient.searchEmpresa(baseUri,element.name).then(sleeper(Math.floor((Math.random() * 1001)))).then(data=>{
               let searchResults=new SearchResultSet(data,"empresa",element.name);
               searchResults.objects.forEach(result=>{
                   if(result.accuracy>=accuracy){
@@ -120,7 +120,7 @@ export class BormeClient{
       });
 
         company.cargos_historial_c.forEach(element => {
-          BormeClient.searchEmpresa(baseUri,element.name).then(data=>{
+          BormeClient.searchEmpresa(baseUri,element.name).then(sleeper(Math.floor((Math.random() * 1001)))).then(data=>{
             let searchResults=new SearchResultSet(data,"empresa",element.name);
             searchResults.objects.forEach(result=>{
                 if(result.accuracy>=accuracy){
@@ -134,7 +134,7 @@ export class BormeClient{
       });
 
       company.cargos_actuales_p.forEach(element => {
-        BormeClient.searchPersona(baseUri,element.name).then(data=>{
+        BormeClient.searchPersona(baseUri,element.name).then(sleeper(Math.floor((Math.random() * 1001)))).then(data=>{
           let searchResults=new SearchResultSet(data,"persona",element.name);
           searchResults.objects.forEach(result=>{
               if(result.accuracy>=accuracy){
@@ -148,7 +148,7 @@ export class BormeClient{
       });
 
       company.cargos_historial_p.forEach(element => {
-        BormeClient.searchPersona(baseUri,element.name).then(data=>{
+        BormeClient.searchPersona(baseUri,element.name).then(sleeper(Math.floor((Math.random() * 1001)))).then(data=>{
           let searchResults=new SearchResultSet(data,"persona",element.name);
           searchResults.objects.forEach(result=>{
               if(result.accuracy>=accuracy){
@@ -170,10 +170,10 @@ export class BormeClient{
    * Carga una empresa facilitando un nombre para la misma, en caso de especificar autoload, los resultados
    * con un valor de acierto superior o igual a accuray serán cargados de forma progresiva. Se llamará
    * el callback cada vez que se produzca la carga de un resultado de búsqueda
-   * @param {} baseUri 
-   * @param {*} searchName 
-   * @param {*} autoexpand 
-   * @param {*} accuracy 
+   * @param {} baseUri
+   * @param {*} searchName
+   * @param {*} autoexpand
+   * @param {*} accuracy
    * @param {*} callback
    */
   static loadEmpresaByName(baseUri,searchName,autoexpand,accuracy,callback){
@@ -190,7 +190,7 @@ export class BormeClient{
             })
            }
         }
-      
+
       }
     });
   };
