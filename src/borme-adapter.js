@@ -40,6 +40,16 @@ export class CompanyDetail{
         this.slug=inputJson.slug;
         this.resource_uri=inputJson.resource_uri;
         this.type=inputJson.type;
+        this.in_companies=[];
+
+        for(let i=0;i<this.cargos_actuales_c.length;i++){
+            this.cargos_actuales_c[i].name=this.cargos_actuales_c[i].name.toUpperCase();
+            this.in_companies.push(this.cargos_actuales_c[i].name);
+        }
+        for(let i=0;i<this.cargos_historial_c.length;i++){
+            this.cargos_historial_c[i].name=this.cargos_historial_c[i].name.toUpperCase();
+            this.in_companies.push(this.cargos_historial_c[i].name);
+        }
     }
     
 }

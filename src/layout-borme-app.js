@@ -176,10 +176,23 @@ class MainLayout extends LitElement{
       //this._handleCompanyDetails(ev.detail.node);
       BormeClient.loadEmpresaByUri(BORME_PROXIED_AT,ev.detail.node.data.resource_uri,true,0.75,(company,item,cargo)=>{
           //this.myNetworkMesh.addNodeData(item);
-          this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
-            relation:this.myNetworkMesh.addRelation(item,company,cargo)
+          if(item instanceof PersonDetail){
+            if(item.in_companies.includes(company.name+" "+company.type)){
+              this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
+                relation:this.myNetworkMesh.addRelation(item,company,cargo)
+              }
+            }));              
+            }
           }
-          }));
+          if(item instanceof CompanyDetail){
+            if(item.in_companies.includes(company.name+" "+company.type)){
+              this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
+                relation:this.myNetworkMesh.addRelation(item,company,cargo)
+              }
+              }));
+            }
+          }
+          
          });
       this.myDiagram.model.removeNodeData(ev.detail.node.data);
     });

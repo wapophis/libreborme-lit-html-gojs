@@ -1,5 +1,8 @@
 import { CompanyDetail, Cargo, PersonDetail } from "./borme-adapter";
 
+/**
+ * Representación de una red basada en grafo
+ */
 export class GraphNetwork{
 
     constructor(){
@@ -32,7 +35,7 @@ export class GraphNetwork{
 
 
 /**
- * 
+ * Representación de un nodo
  */
 export class Node{
     constructor(object){
@@ -62,6 +65,9 @@ export class Node{
     }
 }
 
+/**
+ * Representación de una relación
+ */
 export class Relation{
     constructor(from,to,direction,label,properties){
         this._validate(from,to,direction);
@@ -151,6 +157,18 @@ export class BormeGraphNetwork extends GraphNetwork{
     _buildRelationKey(relation){
         return relation.variable+":"+relation.properties.title;
     }
-
     
+}
+
+
+/**
+ * Representación de un grafo para cypher.
+ */
+export class CypherGraphNetwork extends GraphNetwork{
+    constructor(){
+        super();
+    }
+
+
+
 }
