@@ -171,7 +171,7 @@ function templateLiteralParser(object){
     if(object!=null){
     Object.getOwnPropertyNames(object).forEach((propName)=>{
      /*   console.log(propName);*/
-        if((typeof object[propName]==='object')){
+       // if((typeof object[propName]==='object')){
         /*    let oArray=[];
             object[propName].forEach(item=>{
                 oArray.push(templateLiteralParser(item));
@@ -179,9 +179,11 @@ function templateLiteralParser(object){
             oVal+=`${propName}:[${oArray}]`;*/
             //let inner=templateLiteralParser(object[propName]);
             //oVal+=`{${propName}:'${inner}'}`;
-        }else{
-        oVal+=`${propName}:'${object[propName]}',`;
-        }
+        //}else{
+        //oVal+=`${propName}:'${object[propName]}',`;
+        oVal+=`${propName}:'${JSON.stringify(object[propName])}',`;
+        //oVal[propName]=JSON.stringify(object[propName]);
+        //}
     });
     }
     return oVal.slice(0,oVal.length-1);

@@ -668,7 +668,20 @@ class MainLayout extends LitElement{
 
   _getNetworkMesh(){
     let cypherNet=new CypherGraphNetwork(this.myNetworkMesh.relationMap,this.myNetworkMesh.nodesMap);
-    console.log(cypherNet.processNetwork().join(","));
+
+    console.log();
+    let driver=neo4j.v1.driver("bolt://10.235.72.167:7687", neo4j.v1.auth.basic("", ""));
+    let session=driver.session();
+    session.run(cypherNet.createNetwork())
+    .then(function (result) {
+      result.records.forEach(function (record) {
+        console.log(record.get('p'));
+      });
+      session.close();
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
 
   }
 

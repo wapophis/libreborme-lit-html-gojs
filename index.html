@@ -2,6 +2,7 @@
 <head>
 <!--<script src="https://gojs.net/latest/release/go-debug.js"></script> -->
 <script src="./src/node-adapter.js" type="module"></script>
+<script src="https://unpkg.com/neo4j-driver"></script>
 
 
   <!-- Register service worker if supported. -->
@@ -25,6 +26,8 @@
     WebComponents.waitFor(async () => {
       import('./src/layout-borme-app.js');
       import('./src/node-adapter.js');
+
+
     });
 
   </script>

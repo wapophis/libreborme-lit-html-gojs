@@ -176,12 +176,14 @@ export class CypherGraphNetwork extends GraphNetwork{
 
     addNodeData(node){
      //   this.cypherQuery.push(",");
-        this.cypherQuery.push(CypherProcessor.cypherNode(node.variable,node.label,{
+     /*
+     {
             name:node.properties.name,
             id:node.variable,
             date_updated:node.properties.date_updated
             }
-            ));
+     */
+        this.cypherQuery.push(CypherProcessor.cypherNode(node.variable,node.label,node.properties));
     }
 
     addRelationData(relation){
@@ -206,6 +208,11 @@ export class CypherGraphNetwork extends GraphNetwork{
             this.addRelationData(relation);
         });
         return this.cypherQuery;
+    }
+
+    createNetwork(){
+        let oVal="CREATE p="+this.processNetwork().join(",")+"RETURN p;";
+        return oVal;
     }
 
 }

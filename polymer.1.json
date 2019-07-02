@@ -10,7 +10,14 @@
       "node_modules/@webcomponents/webcomponentsjs/**"
     ],
     "builds": [{
+      "bundle": true,
       "preset": "es6-unbundled",
-      "addPushManifest": false
+      "js": {
+        "minify": false,
+        "compile": "es5",
+        "transformModulesToAmd": true
+      },
+      "addServiceWorker": true,
+      "addPushManifest": true
     }]
   }
