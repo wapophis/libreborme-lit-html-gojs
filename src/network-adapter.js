@@ -183,7 +183,11 @@ export class CypherGraphNetwork extends GraphNetwork{
             date_updated:node.properties.date_updated
             }
      */
-        this.cypherQuery.push(CypherProcessor.cypherNode(node.variable,node.label,node.properties));
+        this.cypherQuery.push(CypherProcessor.cypherNode(node.variable,node.label,{
+            name:node.properties.name,
+            id:node.variable,
+            date_updated:node.properties.date_updated
+        }));
     }
 
     addRelationData(relation){

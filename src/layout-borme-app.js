@@ -5,6 +5,9 @@ import {IconButton} from "@authentic/mwc-icon-button";
 import {TextField} from "@authentic/mwc-textfield";
 import {Card} from "@authentic/mwc-card";
 import {Drawer} from "@authentic/mwc-drawer";
+import {TabBar} from "@authentic/mwc-tab-bar"
+import {Tab} from "@authentic/mwc-tab"
+
 import {GoJsNodeAdapter
 ,NODE_TYPE_COMPANIES_SEARCH_RESULT
 ,NODE_TYPE_COMPANY
@@ -101,10 +104,27 @@ class MainLayout extends LitElement{
       //this._handleSearch(ev.detail.node.data.key.split("\n").join(" "),"empresa",ev.detail.node.data);
       BormeClient.loadEmpresaByUri(BORME_PROXIED_AT,ev.detail.node.data.properties.resource_uri,true,0.75,(company,item,cargo)=>{
         //this.myNetworkMesh.addNodeData(item);
-        this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
+       /* this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
           relation:this.myNetworkMesh.addRelation(item,company,cargo)
+          }));
+        }*/
+        if(item instanceof PersonDetail){
+          if(item.in_companies.includes(company.name+" "+company.type)){
+            this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
+              relation:this.myNetworkMesh.addRelation(item,company,cargo)
+            }
+          }));
+          }
         }
-        }));
+        if(item instanceof CompanyDetail){
+          if(item.in_companies.includes(company.name+" "+company.type)){
+            this.dispatchEvent(new CustomEvent("AddRelation",{detail:{
+              relation:this.myNetworkMesh.addRelation(item,company,cargo)
+            }
+            }));
+          }
+        }
+
        });
     });
 
@@ -537,12 +557,18 @@ class MainLayout extends LitElement{
        align-items: flex-end;">${propName[i]} - ${JSON.stringify(this.selectedNode[propName[i]],null,"\t")} </li>`)*/
       }
     }
-     return html `<table style="font:12px Roboto;border-bottom:1px solid silver;opacity:0.58">
+     return html `
+     <mwc-tab-bar activeIndex="2">
+      <mwc-tab label="Nodes" icon="extension"></mwc-tab>
+      <mwc-tab label="Details" icon="list"></mwc-tab>
+    </mwc-tab-bar>
+    <table style="font:12px Roboto;border-bottom:1px solid silver;opacity:0.58">
         <thead >
           <tr><th style="align:center">Property</th><th>Value</th></tr>
           ${oVal}
         </thead>
-      </table>`;
+      </table>
+    `;
       /*
       return html`<ul style=" list-style-type: none;
       width: 100%;
@@ -605,7 +631,7 @@ class MainLayout extends LitElement{
       <slot name="graphContainer"></slot>
       <div class="layout vertical wrap" style="width:38%;">
       <div style="border:1px solid silver;border-radius:3px;margin-top:60px;margin-left:8px;margin-right:8px;">
-        <div slot="header" style="font:medium Roboto;padding:4px;opacity:0.78;text-align: center;">Detalles del nodo seleccionado</div>
+        <!--<div slot="header" style="font:medium Roboto;padding:4px;opacity:0.78;text-align: center;">Detalles del nodo seleccionado</div>-->
         <div slot="content" style="padding:4px;">
         ${this.render_selected_node_details()}
         </div>
@@ -669,8 +695,8 @@ class MainLayout extends LitElement{
   _getNetworkMesh(){
     let cypherNet=new CypherGraphNetwork(this.myNetworkMesh.relationMap,this.myNetworkMesh.nodesMap);
 
-    console.log();
-    let driver=neo4j.v1.driver("bolt://10.235.72.167:7687", neo4j.v1.auth.basic("", ""));
+    console.log({cypherNet:cypherNet.createNetwork()});
+    let driver=neo4j.v1.driver("bolt://xxx.xxx.xxx.xxx:7687", neo4j.v1.auth.basic("", ""));
     let session=driver.session();
     session.run(cypherNet.createNetwork())
     .then(function (result) {
@@ -681,6 +707,7 @@ class MainLayout extends LitElement{
     })
     .catch(function (error) {
       console.log(error);
+      session.close();
     });
 
   }
