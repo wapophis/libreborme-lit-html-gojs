@@ -19,7 +19,7 @@
     "lit-element": "^2.2.0",
     "lit-flexbox-literals": "0.0.7",
     "neo4j-driver": "^1.7.5",
-    "npm": "^6.9.0"
+    "npm": "^6.14.6"
   },
   "devDependencies": {
     "@webcomponents/webcomponentsjs": "^2.1.3"
